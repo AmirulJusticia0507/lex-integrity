@@ -1,9 +1,12 @@
 // BullMQ worker untuk memproses peraturan dengan LLM
 const Bull = require('bull');
-const { Redis } = require('redis');
-const Rule = require('./models/Rule');
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-const ollama = require('ollama');
+const redis = require('redis').createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
+const { Rule } = require('./models/Rule');
+const { Ollama } = require('ollama');
+
+const ollama = new Ollama({
+  host: process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
+});
 
 // Queue untuk pemrosesan aturan
 const ruleProcessingQueue = new Bull('rule processing', {

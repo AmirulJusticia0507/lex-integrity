@@ -1,7 +1,6 @@
 // Script untuk seed data aturan
 const seedData = require('../../../scripts/seedData');
-const { Rule } = require('../models/Rule');
-const { connectDB } = require('../models/Rule');
+const { Rule, connectDB } = require('../models/Rule');
 
 const seedDatabase = async () => {
   try {

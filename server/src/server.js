@@ -5,7 +5,6 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const { Redis } = require('redis');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,7 +28,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Redis client
-const redis = new Redis({
+const redis = require('redis').createClient({
   url: process.env.REDIS_URL || 'redis://localhost:6379',
   password: process.env.REDIS_PASSWORD || undefined,
   socket: {
@@ -66,7 +65,7 @@ app.get('/health', async (req, res) => {
   }
   
   try {
-    const Rule = require('./models/Rule');
+    const { Rule } = require('./models/Rule');
     const count = await Rule.countDocuments();
     health.database = 'connected';
     health.rule_count = count;
@@ -99,6 +98,7 @@ app.use((err, req, res, next) => {
 // Start server
 const startServer = async () => {
   try {
+    await redis.connect();
     const server = app.listen(PORT, () => {
       console.log(`Server berjalan di port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

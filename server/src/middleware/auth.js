@@ -1,14 +1,10 @@
+// Authentication middleware
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const { User } = require('../models');
-const logger = require('../utils/logger');
 
-const generateToken = (user) => {
-  return jwt.sign(
-    { id: user._id, role: user.role, username: user.username },
-    process.env.JWT_SECRET || 'your-secret-key',
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-  );
+const generateToken = (payload) => {
+  return jwt.sign(payload, process.env.JWT_SECRET || 'your_jwt_secret_here_change_this_in_production', {
+    expiresIn: '24h'
+  });
 };
 
 const authenticateToken = (req, res, next) => {
@@ -16,38 +12,16 @@ const authenticateToken = (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1];
   
   if (!token) {
-    return res.status(401).json({
-      success: false,
-      error: 'Akses ditolak, token tidak ditemukan'
-    });
+    return res.status(401).json({ error: 'Access token required' });
   }
   
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret_here_change_this_in_production');
     req.user = decoded;
     next();
   } catch (error) {
-    return res.status(403).json({
-      success: false,
-      error: 'Token tidak valid'
-    });
+    return res.status(403).json({ error: 'Invalid token' });
   }
 };
 
-const requireRole = (roles) => {
-  return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        error: 'Akses ditolak, peran tidak cukup'
-      });
-    }
-    next();
-  };
-};
-
-module.exports = {
-  generateToken,
-  authenticateToken,
-  requireRole
-};
+module.exports = { generateToken, authenticateToken };

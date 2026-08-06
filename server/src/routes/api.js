@@ -1,5 +1,5 @@
 const express = require('express');
-const { Rule, User, Analytics } = require('../models');
+const { Rule } = require('../models/Rule');
 const { generateToken } = require('../middleware/auth');
 const { authenticateToken } = require('../middleware/auth');
 

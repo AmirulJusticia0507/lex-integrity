@@ -66,7 +66,5 @@ const Rule = mongoose.model('Rule', ruleSchema);
 
 module.exports = {
   Rule,
-  User,
-  Analytics,
   connectDB
 };
