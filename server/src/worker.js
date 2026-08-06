@@ -1,4 +1,6 @@
 // BullMQ worker untuk memproses peraturan dengan LLM
+require('dotenv').config();
+
 const Bull = require('bull');
 const redis = require('redis').createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
 const { Rule } = require('./models/Rule');
@@ -76,18 +78,36 @@ ruleProcessingQueue.process('process-rule', 5, async (job) => {
     }
     
     // Merge data yang sudah di-analyze
+    const toStringArray = (value) => {
+      if (!Array.isArray(value)) return [];
+      return value.map((item) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object') return item.text || JSON.stringify(item);
+        return String(item);
+      }).filter((item) => typeof item === 'string' && item.length > 0);
+    };
+
+    const toSanctions = (value) => {
+      const fallback = { administrative: 'Perlu review hukum', criminal: 'Perlu review hukum' };
+      if (!value || typeof value !== 'object') return fallback;
+      const admin = typeof value.administrative === 'string' ? value.administrative : fallback.administrative;
+      const criminal = typeof value.criminal === 'string' ? value.criminal : fallback.criminal;
+      return { administrative: admin, criminal };
+    };
+
     const enriched_rule = {
       ...rule_data,
-      loopholes: analysis_result.extracted_loopholes || [],
-      impacts: analysis_result.extracted_impacts || [],
-      sanctions: analysis_result.suggested_sanctions || {
-        administrative: 'Perlu review hukum',
-        criminal: 'Perlu review hukum'
-      },
+      loopholes: toStringArray(analysis_result.extracted_loopholes),
+      impacts: toStringArray(analysis_result.extracted_impacts),
+      sanctions: toSanctions(analysis_result.suggested_sanctions),
       processed_at: new Date().toISOString(),
       processed_by: 'ollama-' + ollama_model,
       confidence_score: 0.85
     };
+    delete enriched_rule._id;
+    delete enriched_rule.__v;
+    delete enriched_rule.updated_at;
+    delete enriched_rule.created_at;
     
     // Simpan ke database
     const saved_rule = await Rule.findOneAndUpdate(

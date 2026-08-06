@@ -49,6 +49,11 @@ const ruleSchema = new mongoose.Schema({
   view_count: { type: Number, default: 0 },
   last_viewed: Date,
   similarity_score: Number, // For RAG similarity
+
+  // LLM processing
+  processed_at: Date,
+  processed_by: String,
+  confidence_score: Number,
   
   // System fields
   created_at: { type: Date, default: Date.now },
