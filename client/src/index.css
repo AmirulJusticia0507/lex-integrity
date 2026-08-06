@@ -1,0 +1,25 @@
+/* Tailwind CSS base styles */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow;
+  }
+  
+  .btn {
+    @apply px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors;
+  }
+  
+  .input {
+    @apply px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  }
+}
