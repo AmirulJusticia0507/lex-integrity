@@ -1,0 +1,27 @@
+
+> lex-integrity-api@1.0.0 dev
+> nodemon src/server.js
+
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node src/server.js`[39m
+/home/amirulputraj/lex-integrity/server/src/models/Rule.js:69
+  User,
+  ^
+
+ReferenceError: User is not defined
+    at Object.<anonymous> (/home/amirulputraj/lex-integrity/server/src/models/Rule.js:69:3)
+    at Module._compile (node:internal/modules/cjs/loader:1854:14)
+    at Object..js (node:internal/modules/cjs/loader:1985:10)
+    at Module.load (node:internal/modules/cjs/loader:1577:32)
+    at Module._load (node:internal/modules/cjs/loader:1379:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1600:12)
+    at require (node:internal/modules/helpers:153:16)
+    at Object.<anonymous> (/home/amirulputraj/lex-integrity/server/src/models/index.js:1:18)
+    at Module._compile (node:internal/modules/cjs/loader:1854:14)
+
+Node.js v24.16.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
