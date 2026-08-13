@@ -284,6 +284,47 @@ router.get('/rules/search/suggestions', async (req, res) => {
   }
 });
 
+// POST /api/chat - Chat with local LLM
+router.post('/chat', async (req, res) => {
+  try {
+    const { message } = req.body;
+    
+    if (!message) {
+      return res.status(400).json({
+        success: false,
+        error: 'Pesan wajib diisi'
+      });
+    }
+    
+    const Ollama = require('ollama');
+    const ollama = new Ollama({
+      host: process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
+    });
+    
+    const completion = await ollama.chat({
+      model: process.env.OLLAMA_MODEL || 'deepseek-r1:14b',
+      messages: [{ role: 'user', content: message }],
+      options: {
+        temperature: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.1,
+        num_ctx: 2048
+      }
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        response: completion.message.content
+      }
+    });
+  } catch (error) {
+    console.error('Chat error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Gagal mendapatkan respons dari LLM'
+    });
+  }
+});
+
 // POST /api/rules/:rule_code/analyze - Analyze rule using Local LLM
 router.post('/rules/:rule_code/analyze', async (req, res) => {
   try {

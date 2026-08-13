@@ -29,6 +29,7 @@ function App() {
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/dashboard" element={<DashboardOverview />} />
                 <Route path="/data" element={<DataManagement />} />
+                <Route path="/chat" element={<ChatPage />} />
               </Routes>
             </main>
           </div>

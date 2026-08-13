@@ -30,6 +30,15 @@ export const Sidebar = () => {
             <span className="font-medium">{item.label}</span>
           </a>
         ))}
+        <a
+          href="/chat"
+          className="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 transition-colors"
+          aria-label="Chat dengan AI">
+          <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M21 15a2 2 0 01-2 2H5a2 2 0 01-2-2V3a2 2 0 012-2h11l5 5v5a2 2 0 01-2 2z" />
+          </svg>
+          <span className="font-medium">Chat AI</span>
+        </a>
       </nav>
       
       <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-200">
