@@ -1,15 +1,18 @@
 const Rule = require('../models/Rule');
 const redis = require('redis');
-const { Queue } = require('bull');
+const Bull = require('bull');
 
 class CrawlerService {
   constructor() {
-    this.queue = new Queue('rule processing', {
+    this.queue = new Bull('rule processing', {
       redis: {
         port: parseInt(process.env.REDIS_PORT) || 6379,
-        host: process.env.REDIS_HOST || 'localhost',
+        host: process.env.REDIS_HOST || '127.0.0.1',
         password: process.env.REDIS_PASSWORD || undefined
-      }
+      },
+      // Hindari request menunggu koneksi siap yang memakan waktu
+      enableReadyCheck: false,
+      maxRetriesPerRequest: null
     });
     this.setupProcessors();
   }

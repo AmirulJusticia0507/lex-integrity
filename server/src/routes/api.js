@@ -508,6 +508,106 @@ router.get('/analytics/matrix', async (req, res) => {
   }
 });
 
+// POST /api/actions/scrape - Mulai scraping baru (jalankan scraper via subprocess)
+router.post('/actions/scrape', async (req, res) => {
+  try {
+    const { sources = ['jdih.slemankab.go.id'], source = 'sleman' } = req.body;
+    const { exec } = require('child_process');
+    const path = require('path');
+    const batchId = `batch_${Date.now()}`;
+    const outPath = path.join(__dirname, '..', '..', '..', 'scripts', 'scraper', 'sleman_rules_tmp.json');
+
+    if (source === 'sleman') {
+      const cmd = `python "${path.join(process.cwd(), '..', '..', 'scripts', 'scraper', 'jdih_sleman_scraper.py')}" --no-pdf --output-json "${outPath}"`;
+      exec(cmd, { maxBuffer: 1024 * 1024 * 5, detached: true, timeout: 300000 },
+        (err, stdout, stderr) => {
+          if (err) console.error('Scrape error:', err.message);
+        });
+      res.json({
+        success: true,
+        message: 'Scraping Sleman sedang dijalankan di latar belakang',
+        data: { batch_id: batchId, source: 'jdih.slemankab.go.id', status: 'running' }
+      });
+    } else {
+      const CrawlerService = require('../services/CrawlerService');
+      await CrawlerService.queueScheduledScrape(sources, batchId);
+      res.json({
+        success: true,
+        message: 'Scraping telah dijadwalkan',
+        data: { batch_id: batchId, status: 'queued' }
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/actions/analyze-batch - Analisis batch via worker background process
+router.post('/actions/analyze-batch', async (req, res) => {
+  try {
+    const { limit = 100 } = req.body;
+    const { fork } = require('child_process');
+    const path = require('path');
+    // Worker.js memproses queue; pastikan worker berjalan di background
+    const workerPath = path.join(__dirname, '..', 'worker.js');
+    let worker;
+    try { worker = fork(workerPath, [], { detached: true, stdio: 'ignore' }); } catch (e) {
+      console.error('Spawn worker error:', e.message);
+    }
+    res.json({
+      success: true,
+      message: `Batch analisis LLM dimulai (worker terlanjur, limit ${limit})`,
+      data: { status: 'started' }
+    });
+    if (worker) worker.unref();
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/analytics/export - Ekspor data rules
+router.get('/analytics/export', async (req, res) => {
+  try {
+    const { format = 'json', regime } = req.query;
+    const where = {};
+    if (regime && regime !== 'all') where.regime = regime;
+    const rules = await Rule.findAll({ where, raw: true });
+
+    if (format === 'csv') {
+      const headers = ['rule_code', 'title', 'category', 'regime', 'publish_date', 'source', 'is_active', 'view_count'];
+      const esc = (v) => { const s = v == null ? '' : String(v); return `"${s.replace(/"/g, '""')}"`; };
+      const lines = rules.map(r => headers.map(h => esc(r[h])).join(','));
+      const csv = [headers.join(','), ...lines].join('\n');
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="rules_${Date.now()}.csv"`);
+      return res.send(csv);
+    }
+
+    res.json({
+      success: true,
+      data: rules,
+      count: rules.length
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/actions/clear-cache - Bersihkan cache Redis
+router.post('/actions/clear-cache', async (req, res) => {
+  try {
+    const CacheService = require('../services/CacheService');
+    await CacheService.connect();
+    await CacheService.flush();
+    res.json({
+      success: true,
+      message: 'Cache berhasil dibersihkan'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // GET /api/regimes - Get all regimes for filter
 router.get('/regimes', async (req, res) => {
   try {
