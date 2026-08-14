@@ -52,7 +52,7 @@ const RuleCard = ({ rule }) => {
       </h3>
       
       <p className="text-sm text-gray-600 mb-4 line-clamp-3">
-        {rule.content.substring(0, 150)}...
+        {rule.content ? rule.content.substring(0, 150) : 'Konten belum tersedia'}
       </p>
       
       <div className="space-y-2 mb-4">
