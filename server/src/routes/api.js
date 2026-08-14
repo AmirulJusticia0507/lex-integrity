@@ -229,14 +229,38 @@ router.get('/rules/analytics/overview', async (req, res) => {
       raw: true
     });
     
+    // Get 10 most recent rules for "Peraturan Terbaru"
+    const recentRules = await Rule.findAll({
+      attributes: ['rule_code', 'title', 'category', 'regime', 'publish_date', 'view_count', 'is_active'],
+      order: [['created_at', 'DESC']],
+      limit: 10,
+      raw: true
+    });
+
+    const recentTimeline = await Rule.findAll({
+      attributes: ['regime', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+      where: { regime: { [Op.ne]: null } },
+      group: ['regime'],
+      order: [[sequelize.col('count'), 'DESC']],
+      raw: true
+    });
+
+    const criticalCount = await Rule.findAll({
+      attributes: ['regime', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+      where: sequelize.literal(`jsonb_array_length("loopholes") > 0`),
+      group: ['regime'],
+      raw: true
+    });
+
     res.json({
       success: true,
       data: {
         total_rules: totalRules,
-        rules_by_regime: rulesByRegime,
-        rules_by_category: rulesByCategory,
-        average_views: avgViewsResult.avgViews || 0,
-        average_loopholes_by_category: avgLoopholesByCategory
+        latest_regime: recentRules[0]?.regime || recentTimeline[0]?.regime || '-',
+        critical_loopholes: criticalCount.reduce((s, r) => s + parseInt(r.count || 0), 0),
+        regime_timeline: recentTimeline.map(r => ({ name: r.regime, value: parseInt(r.count || 0) })),
+        category_distribution: rulesByCategory.map(r => ({ name: r.category, value: parseInt(r.count || 0) })),
+        recent_rules: recentRules
       }
     });
   } catch (error) {

@@ -169,7 +169,11 @@ function RuleProvider({ children }) {
   const fetchDashboardData = useCallback(async (regime = 'all', timeRange = 'all') => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/rules/analytics/overview`);
-      dispatch({ type: 'SET_STATS', payload: response.data.data });
+      const data = response.data.data;
+      if (data.recent_rules) {
+        dispatch({ type: 'SET_RULES', payload: data.recent_rules });
+      }
+      dispatch({ type: 'SET_STATS', payload: data });
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error.message });
     }
