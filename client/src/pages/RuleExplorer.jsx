@@ -13,7 +13,12 @@ const RuleExplorer = () => {
   });
   const [showGraph, setShowGraph] = useState(false);
   
-  const { rules, fetchRules, regimes, categories } = useRuleStore();
+  const { rules, fetchRules, fetchRegimes, fetchCategories, regimes, categories } = useRuleStore();
+  
+  useEffect(() => {
+    fetchRegimes();
+    fetchCategories();
+  }, [fetchRegimes, fetchCategories]);
   
   useEffect(() => {
     fetchRules({
@@ -22,7 +27,7 @@ const RuleExplorer = () => {
       category: selectedFilters.category === 'all' ? undefined : selectedFilters.category,
       is_active: true
     });
-  }, [searchTerm, selectedFilters]);
+  }, [searchTerm, selectedFilters, fetchRules]);
   
   const filteredRules = rules.filter(rule => {
     const matchesLoopholes = !selectedFilters.has_loopholes || rule.loopholes.length > 0;

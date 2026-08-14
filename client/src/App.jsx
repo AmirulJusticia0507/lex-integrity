@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import RuleExplorer from './pages/RuleExplorer';
 import LegalMatrix from './pages/LegalMatrix';
 import RuleSearch from './pages/RuleSearch';
+import RuleDetail from './pages/RuleDetail';
 import Analytics from './pages/Analytics';
 import DashboardOverview from './pages/DashboardOverview';
 import DataManagement from './pages/DataManagement';
@@ -25,6 +26,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/rules" element={<RuleExplorer />} />
+                <Route path="/rules/:rule_code" element={<RuleDetail />} />
                 <Route path="/rules/search" element={<RuleSearch />} />
                 <Route path="/matrix" element={<LegalMatrix />} />
                 <Route path="/analytics" element={<Analytics />} />

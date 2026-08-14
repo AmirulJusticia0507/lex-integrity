@@ -1,7 +1,10 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileText, AlertTriangle, TrendingUp, Users, BarChart2 } from 'lucide-react';
 
 const RuleCard = ({ rule }) => {
+  const navigate = useNavigate();
+  
   const getCategoryColor = (category) => {
     const colors = {
       'UU': 'bg-blue-100 text-blue-800',
@@ -77,10 +80,16 @@ const RuleCard = ({ rule }) => {
       </div>
       
       <div className="flex justify-between items-center pt-4 border-t border-gray-100">
-        <button className="text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors">
+        <button
+          onClick={() => navigate(`/rules/${rule.rule_code}`)}
+          className="text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors"
+        >
           Lihat Detail
         </button>
-        <button className="text-gray-600 hover:text-gray-800 text-sm transition-colors">
+        <button
+          onClick={() => navigate(`/rules/${rule.rule_code}?analysis=1`)}
+          className="text-gray-600 hover:text-gray-800 text-sm transition-colors"
+        >
           Analisis Kontradiksi
         </button>
       </div>

@@ -179,6 +179,26 @@ function RuleProvider({ children }) {
     }
   }, []);
   
+  const fetchRuleConflicts = useCallback(async (ruleCode) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/rules/${ruleCode}/conflicts`);
+      return response.data.data;
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+      throw error;
+    }
+  }, []);
+  
+  const analyzeRule = useCallback(async (ruleCode) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/rules/${ruleCode}/analyze`);
+      return response.data.data;
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+      throw error;
+    }
+  }, []);
+  
   const value = {
     ...state,
     fetchRules,
@@ -191,6 +211,8 @@ function RuleProvider({ children }) {
     fetchCategories,
     fetchDashboardData,
     analyzeConflicts,
+    fetchRuleConflicts,
+    analyzeRule,
     clearError: () => dispatch({ type: 'SET_ERROR', payload: null })
   };
   
