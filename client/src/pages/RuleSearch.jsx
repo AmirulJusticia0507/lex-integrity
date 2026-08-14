@@ -19,15 +19,27 @@ const RuleSearch = () => {
   }, [fetchRegimes, fetchCategories]);
   
   useEffect(() => {
-    if (searchTerm.trim().length >= 2) {
-      searchRules(searchTerm, selectedFilters);
+    const hasTerm = searchTerm.trim().length >= 2;
+    const hasFilter = selectedFilters.regime !== 'all' || selectedFilters.category !== 'all';
+    if (hasTerm || hasFilter) {
+      searchRules(searchTerm.trim(), selectedFilters);
     }
   }, [searchTerm, selectedFilters, searchRules]);
+
+  const hasActiveSearch = searchTerm.trim().length >= 2 ||
+    selectedFilters.regime !== 'all' || selectedFilters.category !== 'all';
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (hasActiveSearch) {
+      searchRules(searchTerm.trim(), selectedFilters);
+    }
+  };
   
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg p-6">
-        <form onSubmit={(e) => { e.preventDefault(); if (searchTerm.trim()) searchRules(searchTerm, selectedFilters); }} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <input
@@ -72,7 +84,7 @@ const RuleSearch = () => {
         </form>
       </div>
       
-      {searchTerm && (
+      {hasActiveSearch && (
         <div className="bg-white rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">
