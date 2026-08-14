@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { LineChart, BarChart, PieChart } from './charts';
-import { RuleCard } from './rules';
+import { LineChart, BarChart, PieChart } from '../components/charts';
+import { RuleCard } from '../components/rules';
 import { useRuleStore } from '../store/rules';
 import { TrendingUp, Users, FileText, AlertTriangle } from 'lucide-react';
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, FileText, AlertTriangle } from 'lucide-react';
 import { useRuleStore } from '../store/rules';
 import { RuleCard } from '../components/rules';

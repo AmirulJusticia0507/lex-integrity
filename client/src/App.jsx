@@ -10,6 +10,7 @@ import RuleSearch from './pages/RuleSearch';
 import Analytics from './pages/Analytics';
 import DashboardOverview from './pages/DashboardOverview';
 import DataManagement from './pages/DataManagement';
+import ChatPage from './pages/ChatPage';
 import { Sidebar } from './components/layout';
 import './index.css';
 

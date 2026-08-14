@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AlertTriangle, FileText } from 'lucide-react';
 import { BarChart, LineChart } from '../components/charts';
 import { useRuleStore } from '../store/rules';
 
