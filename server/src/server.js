@@ -77,6 +77,49 @@ app.get('/health', async (req, res) => {
     health.database_error = error.message;
   }
   
+  // Check Ollama availability (server-side, avoids browser CORS)
+  try {
+    const ollamaHost = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    const ollamaRes = await fetch(`${ollamaHost}/api/tags`, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (ollamaRes.ok) {
+      const tags = await ollamaRes.json();
+      health.ollama = 'connected';
+      health.ollama_models = (tags.models || []).map(m => m.name);
+    } else {
+      health.ollama = 'disconnected';
+    }
+  } catch (error) {
+    health.ollama = 'disconnected';
+    health.ollama_error = error.message;
+  }
+  
+  // Check Bull queue availability
+  try {
+    const Bull = require('bull');
+    const queue = new Bull('rule processing', {
+      redis: {
+        port: parseInt(process.env.REDIS_PORT) || 6379,
+        host: process.env.REDIS_HOST || 'localhost',
+        password: process.env.REDIS_PASSWORD || undefined
+      }
+    });
+    const [waiting, active, completed, failed] = await Promise.all([
+      queue.getWaitingCount(),
+      queue.getActiveCount(),
+      queue.getCompletedCount(),
+      queue.getFailedCount()
+    ]);
+    await queue.close();
+    health.queue = 'connected';
+    health.queue_stats = { waiting, active, completed, failed };
+  } catch (error) {
+    health.queue = 'disconnected';
+    health.queue_error = error.message;
+  }
+  
   const statusCode = health.redis === 'connected' && health.database === 'connected' ? 200 : 503;
   res.status(statusCode).json(health);
 });

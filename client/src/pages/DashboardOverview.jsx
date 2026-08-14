@@ -19,26 +19,12 @@ const DashboardOverview = () => {
         
         healthData.database = health.database === 'connected' ? 'healthy' : 'error';
         healthData.redis = health.redis === 'connected' ? 'healthy' : 'error';
-        
-        // Check Ollama
-        try {
-          const ollamaResponse = await fetch('http://localhost:11434/api/tags');
-          healthData.ollama = ollamaResponse.ok ? 'healthy' : 'error';
-        } catch {
-          healthData.ollama = 'error';
-        }
-        
-        // Check Bull queue
-        try {
-          const queueResponse = await fetch('/api/queue/stats');
-          healthData.queue = queueResponse.ok ? 'healthy' : 'error';
-        } catch {
-          healthData.queue = 'error';
-        }
+        healthData.ollama = health.ollama === 'connected' ? 'healthy' : 'error';
+        healthData.queue = health.queue === 'connected' ? 'healthy' : 'error';
         
         setSystemHealth(healthData);
       } catch (error) {
-        setSystemHealth(prev => ({ ...prev, database: 'error', redis: 'error' }));
+        setSystemHealth(prev => ({ ...prev, database: 'error', redis: 'error', ollama: 'error', queue: 'error' }));
       }
     };
     
