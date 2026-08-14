@@ -33,7 +33,7 @@ function AnalyticsProvider({ children }) {
   const fetchAnalytics = useCallback(async (timeRange = '30d') => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/analytics`);
+      const response = await axios.get(`${API_BASE_URL}/api/analytics?range=${timeRange}`);
       dispatch({ type: 'SET_STATS', payload: response.data.data });
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error.message });

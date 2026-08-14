@@ -392,6 +392,57 @@ router.get('/rules/:rule_code/conflicts', async (req, res) => {
   }
 });
 
+// GET /api/analytics - Dashboard analytics (total views, trends, breakdowns)
+router.get('/analytics', async (req, res) => {
+  try {
+    const rules = await Rule.findAll({
+      attributes: ['id', 'regime', 'category', 'loopholes', 'view_count', 'publish_date', 'title', 'processed_at', 'content']
+    });
+
+    const total_views = rules.reduce((sum, r) => sum + (r.view_count || 0), 0);
+    const rules_analyzed = rules.filter(r => r.processed_at).length;
+    const critical_findings = rules.filter(r => Array.isArray(r.loopholes) && r.loopholes.length > 0).length;
+    const engagement_rate = rules.length ? Math.round((total_views / rules.length) * 10) / 10 : 0;
+
+    const viewTrendMap = {};
+    const analysisTrendMap = {};
+    const categoryMap = {};
+    const regimeMap = {};
+    rules.forEach(r => {
+      if (r.publish_date) {
+        const year = String(r.publish_date).slice(0, 4);
+        viewTrendMap[year] = (viewTrendMap[year] || 0) + 1;
+        analysisTrendMap[year] = (analysisTrendMap[year] || 0) + 1;
+      }
+      if (r.category) categoryMap[r.category] = (categoryMap[r.category] || 0) + 1;
+      if (r.regime) regimeMap[r.regime] = (regimeMap[r.regime] || 0) + 1;
+    });
+
+    const toSeries = (map) => Object.entries(map)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+
+    res.json({
+      success: true,
+      data: {
+        total_views,
+        rules_analyzed,
+        critical_findings,
+        engagement_rate,
+        view_trends: toSeries(viewTrendMap),
+        analysis_trends: toSeries(analysisTrendMap),
+        category_breakdown: toSeries(categoryMap),
+        regime_evolution: toSeries(regimeMap)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // GET /api/analytics/matrix - Laporan celah & risiko (critical loopholes + popular regulations)
 router.get('/analytics/matrix', async (req, res) => {
   try {
