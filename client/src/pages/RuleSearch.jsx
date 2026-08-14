@@ -27,7 +27,7 @@ const RuleSearch = () => {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg p-6">
-        <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); if (searchTerm.trim()) searchRules(searchTerm, selectedFilters); }} className="space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <input
