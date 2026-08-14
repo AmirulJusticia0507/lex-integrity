@@ -1,31 +1,53 @@
 // Analytics utilities
-const Rule = require('./Rule');
+const { Op } = require('sequelize');
+const Rule = require('../models/Rule');
 
 const getAnalytics = async () => {
-  const overview = await Promise.all([
-    Rule.countDocuments(),
-    Rule.aggregate([{ $group: { _id: '$regime', count: { $sum: 1 } } }]),
-    Rule.aggregate([{ $group: { _id: '$category', count: { $sum: 1 } } }]),
-    Rule.aggregate([{ $group: { _id: null, avgViews: { $avg: '$view_count' } } }]),
-    Rule.aggregate([
-      { $group: { _id: '$category', avgLoopholes: { $avg: { $size: '$loopholes' } } } }
-    ])
-  ]);
+  const sequelize = Rule.sequelize;
+  
+  const totalRules = await Rule.count();
+  
+  const rulesByRegime = await Rule.findAll({
+    attributes: ['regime', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+    group: ['regime'],
+    raw: true
+  });
+  
+  const rulesByCategory = await Rule.findAll({
+    attributes: ['category', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+    group: ['category'],
+    raw: true
+  });
+  
+  const avgViewsResult = await Rule.findOne({
+    attributes: [[sequelize.fn('AVG', sequelize.col('view_count')), 'avgViews']],
+    raw: true
+  });
+  
+  const avgLoopholesByCategory = await Rule.findAll({
+    attributes: [
+      'category',
+      [sequelize.fn('AVG', sequelize.fn('jsonb_array_length', sequelize.col('loopholes'))), 'avgLoopholes']
+    ],
+    group: ['category'],
+    raw: true
+  });
   
   return {
-    total_rules: overview[0],
-    rules_by_regime: overview[1],
-    rules_by_category: overview[2],
-    average_views: overview[3][0]?.avgViews || 0,
-    average_loopholes_by_category: overview[4]
+    total_rules: totalRules,
+    rules_by_regime: rulesByRegime,
+    rules_by_category: rulesByCategory,
+    average_views: avgViewsResult.avgViews || 0,
+    average_loopholes_by_category: avgLoopholesByCategory
   };
 };
 
 const getRecentRules = async (limit = 5) => {
-  return await Rule.find()
-    .sort({ created_at: -1 })
-    .limit(limit)
-    .select('rule_code title regime category created_at view_count');
+  return await Rule.findAll({
+    attributes: ['rule_code', 'title', 'regime', 'category', 'created_at', 'view_count'],
+    order: [['created_at', 'DESC']],
+    limit
+  });
 };
 
 module.exports = {

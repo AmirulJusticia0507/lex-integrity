@@ -1,25 +1,26 @@
 // Script untuk seed data aturan
 const seedData = require('../../../scripts/seedData');
-const { Rule, connectDB } = require('../models/Rule');
+const Rule = require('../models/Rule');
 
 const seedDatabase = async () => {
   try {
-    await connectDB();
+    await Rule.sync({ alter: true });
     
     // Hapus semua data aturan yang ada
-    await Rule.deleteMany({});
+    await Rule.destroy({ truncate: true });
     console.log('Data dihapus');
     
     // Insert data baru
-    const insertedRules = await Rule.insertMany(seedData);
+    const dataToInsert = Array.isArray(seedData) ? seedData : (seedData.rules || []);
+    const insertedRules = await Rule.bulkCreate(dataToInsert);
     console.log(`Database berhasil di-seed: ${insertedRules.length} aturan ditambahkan`);
     
     // Verifikasi data
-    const count = await Rule.countDocuments();
+    const count = await Rule.count();
     console.log(`Total aturan dalam database: ${count}`);
     
     // Tampilkan beberapa contoh
-    const samples = await Rule.find().limit(5);
+    const samples = await Rule.findAll({ limit: 5 });
     console.log('Contoh aturan:');
     samples.forEach(rule => {
       console.log(`- ${rule.rule_code}: ${rule.title}`);

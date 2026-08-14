@@ -1,75 +1,97 @@
-const mongoose = require('mongoose');
-
-// Koneksi ke MongoDB
-const connectDB = async () => {
-  try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/lex_integrity';
-    await mongoose.connect(mongoUri);
-    console.log('Connected to MongoDB');
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    process.exit(1);
-  }
-};
-
-connectDB();
-
-// Definisikan schema untuk aturan
-const ruleSchema = new mongoose.Schema({
-  // Basic metadata
-  rule_code: { type: String, required: true, unique: true, index: true },
-  title: { type: String, required: true },
-  regime: { type: String, required: true, index: true },
-  category: { type: String, required: true, enum: ['UU', 'PP', 'Perpres', 'Perda', 'Permen', 'Lainnya'], index: true },
-  content: { type: String, required: true },
-  
-  // Hierarchy relationships
-  derived_rules: [{
-    rule_code: { type: String, ref: 'Rule' },
-    relation: String
-  }],
-  
-  // Risk analysis
-  loopholes: [String], // Array of identified loopholes
-  impacts: [String],   // Array of potential impacts
-  
-  // Sanctions
-  sanctions: {
-    administrative: String,
-    criminal: String
-  },
-  
-  // Metadata
-  publish_date: String,
-  source: String, // setneg, kemenkumham, pemprov, dpr, dprd
-  pdf_url: String,
-  text_content: String, // Extracted text from PDF
-  
-  // Analytics
-  view_count: { type: Number, default: 0 },
-  last_viewed: Date,
-  similarity_score: Number, // For RAG similarity
-
-  // LLM processing
-  processed_at: Date,
-  processed_by: String,
-  confidence_score: Number,
-  
-  // System fields
-  created_at: { type: Date, default: Date.now },
-  updated_at: { type: Date, default: Date.now },
-  is_active: { type: Boolean, default: true }
-}, {
-  collection: 'rules'
+const { Sequelize, DataTypes } = require('sequelize');
+const sequelize = new Sequelize('lex_integrity', 'postgres', 'admin123', {
+  host: 'localhost',
+  dialect: 'postgres',
+  port: 5432,
+  logging: false,  // Set true kalau mau log query di console
 });
 
-// Index untuk pencarian teks
-ruleSchema.index({ title: 'text', content: 'text' });
+const Rule = sequelize.define('Rule', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  rule_code: {
+    type: DataTypes.STRING(100),
+    unique: true,
+    allowNull: false
+  },
+  title: {
+    type: DataTypes.STRING(500),
+    allowNull: false
+  },
+  regime: {
+    type: DataTypes.STRING(100)
+  },
+  category: {
+    type: DataTypes.STRING(50)
+  },
+  content: {
+    type: DataTypes.TEXT
+  },
+  derived_rules: {
+    type: DataTypes.JSONB,
+    defaultValue: []
+  },
+  is_active: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  },
+  publish_date: {
+    type: DataTypes.DATEONLY
+  },
+  source: {
+    type: DataTypes.STRING(255)
+  },
+  pdf_url: {
+    type: DataTypes.STRING(500)
+  },
+  loopholes: {
+    type: DataTypes.JSONB,
+    defaultValue: []
+  },
+  impacts: {
+    type: DataTypes.JSONB,
+    defaultValue: []
+  },
+  sanctions: {
+    type: DataTypes.JSONB,
+    defaultValue: { administrative: '', criminal: '' }
+  },
+  view_count: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  confidence_score: {
+    type: DataTypes.DOUBLE,
+    defaultValue: 0.85
+  },
+  processed_at: {
+    type: DataTypes.DATE
+  },
+  processed_by: {
+    type: DataTypes.STRING(100)
+  },
+  processing_method: {
+    type: DataTypes.STRING(50)
+  },
+  created_at: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
+  },
+  updated_at: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
+  }
+}, {
+  tableName: 'rules',
+  timestamps: false  // Karena udah ada created_at/updated_at manual
+});
 
-// Model
-const Rule = mongoose.model('Rule', ruleSchema);
+// Sync model ke database (buat tabel kalau blom ada)
+Rule.sync()
+  .then(() => console.log('Rule table synced'))
+  .catch(err => console.error('Sync error:', err));
 
-module.exports = {
-  Rule,
-  connectDB
-};
+module.exports = Rule;

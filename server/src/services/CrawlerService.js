@@ -1,4 +1,4 @@
-const { Rule } = require('../models');
+const Rule = require('../models/Rule');
 const redis = require('redis');
 const { Queue } = require('bull');
 
@@ -25,15 +25,14 @@ class CrawlerService {
         const analysis = await RAGService.analyzeRule(rule_data);
         
         // Update rule in database
-        await Rule.findOneAndUpdate(
-          { rule_code: rule_data.rule_code },
-          { 
-            $set: {
-              loopholes: analysis.loopholes || [],
-              impacts: analysis.impacts || [],
-              sanctions: analysis.sanctions || { administrative: '', criminal: '' }
-            }
-          }
+        await Rule.update(
+          {
+            loopholes: analysis.loopholes || [],
+            impacts: analysis.impacts || [],
+            sanctions: analysis.sanctions || { administrative: '', criminal: '' },
+            updated_at: new Date()
+          },
+          { where: { rule_code: rule_data.rule_code } }
         );
         
         return { success: true, analyzed_rule: analysis };

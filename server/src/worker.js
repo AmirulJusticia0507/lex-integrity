@@ -3,7 +3,7 @@ require('dotenv').config();
 
 const Bull = require('bull');
 const redis = require('redis').createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
-const { Rule } = require('./models/Rule');
+const Rule = require('./models/Rule');
 const { Ollama } = require('ollama');
 
 const ollama = new Ollama({
@@ -104,20 +104,18 @@ ruleProcessingQueue.process('process-rule', 5, async (job) => {
       processed_by: 'ollama-' + ollama_model,
       confidence_score: 0.85
     };
-    delete enriched_rule._id;
-    delete enriched_rule.__v;
-    delete enriched_rule.updated_at;
-    delete enriched_rule.created_at;
     
-    // Simpan ke database
-    const saved_rule = await Rule.findOneAndUpdate(
-      { rule_code: enriched_rule.rule_code },
-      { $set: enriched_rule, $currentDate: { updated_at: true } },
-      { new: true, upsert: true, runValidators: true }
-    );
+    // Simpan ke database (upsert behavior)
+    let saved_rule = await Rule.findOne({ where: { rule_code: enriched_rule.rule_code } });
+    if (saved_rule) {
+      await Rule.update(enriched_rule, { where: { rule_code: enriched_rule.rule_code } });
+      saved_rule = await Rule.findOne({ where: { rule_code: enriched_rule.rule_code } });
+    } else {
+      saved_rule = await Rule.create(enriched_rule);
+    }
     
     console.log(`Aturan berhasil diproses: ${saved_rule.rule_code}`);
-    return { rule_id: saved_rule._id, status: 'completed' };
+    return { rule_id: saved_rule.id, status: 'completed' };
     
   } catch (error) {
     console.error(`Gagal memproses aturan ${job.data.rule_data.rule_code}:`, error);
@@ -134,7 +132,7 @@ ruleProcessingQueue.process('batch-process', 3, async (job) => {
     
     const results = [];
     for (const rule_id of rule_ids) {
-      const rule = await Rule.findById(rule_id);
+      const rule = await Rule.findByPk(rule_id);
       if (!rule) {
         results.push({ rule_id, status: 'not_found' });
         continue;
@@ -152,8 +150,7 @@ ruleProcessingQueue.process('batch-process', 3, async (job) => {
       // Parse hasil (implementasi serupa dengan di atas)
       const analysis_result = JSON.parse(completion.message.content.match(/\{[^]+\}/)[0]);
       
-      const updated_rule = await Rule.findByIdAndUpdate(
-        rule_id,
+      await Rule.update(
         {
           loopholes: analysis_result.extracted_loopholes || [],
           impacts: analysis_result.extracted_impacts || [],
@@ -161,8 +158,10 @@ ruleProcessingQueue.process('batch-process', 3, async (job) => {
           processed_at: new Date().toISOString(),
           processing_method: 'batch'
         },
-        { new: true }
+        { where: { id: rule_id } }
       );
+      
+      const updated_rule = await Rule.findByPk(rule_id);
       
       results.push({
         rule_id: rule_id,

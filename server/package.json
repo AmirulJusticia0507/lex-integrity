@@ -17,14 +17,15 @@
     "express-rate-limit": "^6.7.0",
     "helmet": "^7.0.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.5.1",
     "node-cron": "^3.0.0",
     "ollama": "^0.6.3",
-    "redis": "^4.6.0"
+    "pg": "^8.23.0",
+    "pg-hstore": "^2.3.4",
+    "redis": "^4.6.0",
+    "sequelize": "^6.37.8"
   },
   "devDependencies": {
     "jest": "^29.7.0",
-    "mongodb-memory-server": "^8.0.0",
     "nodemon": "^3.0.1"
   },
   "author": "amirulputraj",

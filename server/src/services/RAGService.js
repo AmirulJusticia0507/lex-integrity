@@ -1,4 +1,5 @@
-const { Rule } = require('../models');
+const { Op } = require('sequelize');
+const Rule = require('../models/Rule');
 const { getEmbedding } = require('../utils/embedding');
 const cacheService = require('./CacheService');
 
@@ -19,7 +20,7 @@ class RAGService {
       
       // Combine with existing rule data
       const enhancedRule = {
-        ...rule.toObject(),
+        ...rule.toJSON(),
         ...extracted,
         analysis_timestamp: new Date()
       };
@@ -70,8 +71,8 @@ class RAGService {
           result.sanctions = JSON.parse(sanctionsText.replace(/'/g, '"'));
         } catch (e) {
           // Parse fallback
-          result.sanctions.administrative = sanctionsText.match(\"\"\"administratif.*?(?=\\n|$)\"\"\")?.[0] || '';
-          result.sanctions.criminal = sanctionsText.match(\"\"\"kriminal.*?(?=\\n|$)\"\"\")?.[0] || '';
+          result.sanctions.administrative = sanctionsText.match(/administratif.*?(?=\n|$)/)?.[0] || '';
+          result.sanctions.criminal = sanctionsText.match(/kriminal.*?(?=\n|$)/)?.[0] || '';
         }
       }
     });
@@ -87,35 +88,28 @@ class RAGService {
         return cachedSimilar;
       }
       
-      // Find semantically similar rules
-      const rule = await Rule.findOne({ rule_code: ruleCode });
+      // Find semantically similar rules using ILIKE search
+      const rule = await Rule.findOne({ where: { rule_code: ruleCode } });
       if (!rule) return [];
       
-      // Use MongoDB text search for semantic similarity
-      const similarRules = await Rule.aggregate([
-        {
-          $text: { $search: rule.title + ' ' + rule.content }
+      // Use PostgreSQL ILIKE search for semantic similarity
+      const keywords = (rule.title + ' ' + rule.content).split(' ').filter(w => w.length > 4).slice(0, 5);
+      
+      const similarRules = await Rule.findAll({
+        attributes: ['rule_code', 'title', 'regime', 'category'],
+        where: {
+          rule_code: { [Op.ne]: ruleCode },
+          is_active: true,
+          [Op.or]: keywords.map(k => ({
+            [Op.or]: [
+              { title: { [Op.iLike]: `%${k}%` } },
+              { content: { [Op.iLike]: `%${k}%` } }
+            ]
+          }))
         },
-        {
-          $match: {
-            rule_code: { $ne: ruleCode },
-            is_active: true
-          }
-        },
-        {
-          $project: {
-            rule_code: 1,
-            title: 1,
-            regime: 1,
-            category: 1,
-            similarity_score: { $meta: 'textScore' }
-          }
-        },
-        {
-          $sort: { similarity_score: { $meta: 'textScore' }, similarity_score: -1 }
-        },
-        { $limit: 10 }
-      ]);
+        limit: 10,
+        raw: true
+      });
       
       // Cache the results
       await cacheService.setSimilarRules(ruleCode, similarRules, 1800);

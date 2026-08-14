@@ -1,5 +1,4 @@
 const Redis = require('redis');
-const { Rule } = require('../models');
 
 class CacheService {
   constructor() {

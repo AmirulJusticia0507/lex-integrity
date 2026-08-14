@@ -1,7 +1,6 @@
 const express = require('express');
-const { Rule } = require('../models/Rule');
-const { generateToken } = require('../middleware/auth');
-const { authenticateToken } = require('../middleware/auth');
+const { Op } = require('sequelize');
+const Rule = require('../models/Rule');
 
 const router = express.Router();
 
@@ -10,32 +9,30 @@ router.get('/rules', async (req, res) => {
   try {
     const { search, regime, category, limit = 20, page = 1 } = req.query;
     
-    // Build filter
-    const filter = {};
+    // Build where clause
+    const where = {};
     if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { content: { $regex: search, $options: 'i' } },
-        { rule_code: { $regex: search, $options: 'i' } }
+      where[Op.or] = [
+        { title: { [Op.iLike]: `%${search}%` } },
+        { content: { [Op.iLike]: `%${search}%` } },
+        { rule_code: { [Op.iLike]: `%${search}%` } }
       ];
     }
-    if (regime) filter.regime = regime;
-    if (category) filter.category = category;
-    if (req.query.is_active !== undefined) filter.is_active = req.query.is_active === 'true';
+    if (regime) where.regime = regime;
+    if (category) where.category = category;
+    if (req.query.is_active !== undefined) where.is_active = req.query.is_active === 'true';
     
     // Pagination
-    const skip = (page - 1) * limit;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
     const limitNum = parseInt(limit);
     
-    // Execute queries
-    const [rules, total] = await Promise.all([
-      Rule.find(filter)
-        .sort({ created_at: -1 })
-        .skip(skip)
-        .limit(limitNum)
-        .populate('derived_rules.rule_code'),
-      Rule.countDocuments(filter)
-    ]);
+    // Execute query
+    const { count, rows: rules } = await Rule.findAndCountAll({
+      where,
+      order: [['created_at', 'DESC']],
+      offset,
+      limit: limitNum
+    });
     
     res.json({
       success: true,
@@ -43,8 +40,8 @@ router.get('/rules', async (req, res) => {
       pagination: {
         page: parseInt(page),
         limit: limitNum,
-        total,
-        pages: Math.ceil(total / limitNum)
+        total: count,
+        pages: Math.ceil(count / limitNum)
       }
     });
   } catch (error) {
@@ -60,9 +57,7 @@ router.get('/rules/:rule_code', async (req, res) => {
   try {
     const { rule_code } = req.params;
     
-    const rule = await Rule.findOne({ rule_code })
-      .populate('derived_rules.rule_code')
-      .lean();
+    const rule = await Rule.findOne({ where: { rule_code } });
     if (!rule) {
       return res.status(404).json({
         success: false,
@@ -71,10 +66,10 @@ router.get('/rules/:rule_code', async (req, res) => {
     }
     
     // Increment view count and update last viewed
-    await Rule.updateOne({ rule_code }, { 
-      $inc: { view_count: 1 },
-      $set: { last_viewed: new Date() }
-    });
+    await Rule.update(
+      { view_count: rule.view_count + 1, last_viewed: new Date() },
+      { where: { rule_code } }
+    );
     
     res.json({
       success: true,
@@ -102,7 +97,7 @@ router.post('/rules', async (req, res) => {
     }
     
     // Check if rule already exists
-    const existingRule = await Rule.findOne({ rule_code: ruleData.rule_code });
+    const existingRule = await Rule.findOne({ where: { rule_code: ruleData.rule_code } });
     if (existingRule) {
       return res.status(409).json({
         success: false,
@@ -111,26 +106,19 @@ router.post('/rules', async (req, res) => {
     }
     
     // Create new rule
-    const newRule = new Rule({
+    const newRule = await Rule.create({
       rule_code: ruleData.rule_code,
       title: ruleData.title,
       regime: ruleData.regime || 'Lainnya',
       category: ruleData.category || 'Lainnya',
       content: ruleData.content,
-      derived_rules: ruleData.derived_rules || [],
       loopholes: ruleData.loopholes || [],
       impacts: ruleData.impacts || [],
       sanctions: ruleData.sanctions || { administrative: '', criminal: '' },
       publish_date: ruleData.publish_date || null,
       source: ruleData.source || null,
-      pdf_url: ruleData.pdf_url || null,
-      created_at: new Date()
+      pdf_url: ruleData.pdf_url || null
     });
-    
-    await newRule.save();
-    
-    // Add to processing queue for LLM analysis (optional)
-    // await queue.add('process-rule', { rule_data: newRule.toObject(), user_id: req.user?.id });
     
     res.status(201).json({
       success: true,
@@ -138,12 +126,6 @@ router.post('/rules', async (req, res) => {
       data: newRule
     });
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(409).json({
-        success: false,
-        error: 'Peraturan dengan rule_code ini sudah ada'
-      });
-    }
     res.status(500).json({
       success: false,
       error: error.message
@@ -157,18 +139,24 @@ router.put('/rules/:rule_code', async (req, res) => {
     const { rule_code } = req.params;
     const updates = req.body;
     
-    const updatedRule = await Rule.findOneAndUpdate(
-      { rule_code },
-      { $set: updates, $currentDate: { updated_at: true } },
-      { new: true, runValidators: true }
+    // Remove fields that shouldn't be updated via this route
+    delete updates.id;
+    delete updates.rule_code;
+    delete updates.created_at;
+    
+    const [affectedRows] = await Rule.update(
+      { ...updates, updated_at: new Date() },
+      { where: { rule_code } }
     );
     
-    if (!updatedRule) {
+    if (affectedRows === 0) {
       return res.status(404).json({
         success: false,
         error: 'Peraturan tidak ditemukan'
       });
     }
+    
+    const updatedRule = await Rule.findOne({ where: { rule_code } });
     
     res.json({
       success: true,
@@ -187,8 +175,8 @@ router.delete('/rules/:rule_code', async (req, res) => {
   try {
     const { rule_code } = req.params;
     
-    const deletedRule = await Rule.findOneAndDelete({ rule_code });
-    if (!deletedRule) {
+    const deletedCount = await Rule.destroy({ where: { rule_code } });
+    if (deletedCount === 0) {
       return res.status(404).json({
         success: false,
         error: 'Peraturan tidak ditemukan'
@@ -197,8 +185,7 @@ router.delete('/rules/:rule_code', async (req, res) => {
     
     res.json({
       success: true,
-      message: 'Peraturan berhasil dihapus',
-      data: deletedRule
+      message: 'Peraturan berhasil dihapus'
     });
   } catch (error) {
     res.status(500).json({
@@ -211,24 +198,44 @@ router.delete('/rules/:rule_code', async (req, res) => {
 // GET /api/rules/analytics/overview - Get analytics overview
 router.get('/rules/analytics/overview', async (req, res) => {
   try {
-    const overview = await Promise.all([
-      Rule.countDocuments(),
-      Rule.aggregate([{ $group: { _id: '$regime', count: { $sum: 1 } } }]),
-      Rule.aggregate([{ $group: { _id: '$category', count: { $sum: 1 } } }]),
-      Rule.aggregate([{ $group: { _id: null, avgViews: { $avg: '$view_count' } } }]),
-      Rule.aggregate([
-        { $group: { _id: '$category', avgLoopholes: { $avg: { $size: '$loopholes' } } } }
-      ])
-    ]);
+    const { sequelize } = require('../models/Rule');
+    
+    const totalRules = await Rule.count();
+    
+    const rulesByRegime = await Rule.findAll({
+      attributes: ['regime', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+      group: ['regime'],
+      raw: true
+    });
+    
+    const rulesByCategory = await Rule.findAll({
+      attributes: ['category', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+      group: ['category'],
+      raw: true
+    });
+    
+    const avgViewsResult = await Rule.findOne({
+      attributes: [[sequelize.fn('AVG', sequelize.col('view_count')), 'avgViews']],
+      raw: true
+    });
+    
+    const avgLoopholesByCategory = await Rule.findAll({
+      attributes: [
+        'category',
+        [sequelize.fn('AVG', sequelize.fn('jsonb_array_length', sequelize.col('loopholes'))), 'avgLoopholes']
+      ],
+      group: ['category'],
+      raw: true
+    });
     
     res.json({
       success: true,
       data: {
-        total_rules: overview[0],
-        rules_by_regime: overview[1],
-        rules_by_category: overview[2],
-        average_views: overview[3][0]?.avgViews || 0,
-        average_loopholes_by_category: overview[4]
+        total_rules: totalRules,
+        rules_by_regime: rulesByRegime,
+        rules_by_category: rulesByCategory,
+        average_views: avgViewsResult.avgViews || 0,
+        average_loopholes_by_category: avgLoopholesByCategory
       }
     });
   } catch (error) {
@@ -250,27 +257,18 @@ router.get('/rules/search/suggestions', async (req, res) => {
       });
     }
     
-    const suggestions = await Rule.aggregate([
-      {
-        $match: {
-          $or: [
-            { title: { $regex: q, $options: 'i' } },
-            { rule_code: { $regex: q, $options: 'i' } }
-          ]
-        }
+    const suggestions = await Rule.findAll({
+      attributes: ['id', 'title', 'rule_code', 'regime', 'category'],
+      where: {
+        [Op.or]: [
+          { title: { [Op.iLike]: `%${q}%` } },
+          { rule_code: { [Op.iLike]: `%${q}%` } }
+        ]
       },
-      {
-        $project: {
-          title: 1,
-          rule_code: 1,
-          regime: 1,
-          category: 1,
-          score: { $cond: [{ $eq: ['$title', q] }, 10, 1] }
-        }
-      },
-      { $sort: { score: -1, title: 1 } },
-      { $limit: 10 }
-    ]);
+      order: [['title', 'ASC']],
+      limit: 10,
+      raw: true
+    });
     
     res.json({
       success: true,
@@ -329,9 +327,8 @@ router.post('/chat', async (req, res) => {
 router.post('/rules/:rule_code/analyze', async (req, res) => {
   try {
     const { rule_code } = req.params;
-    const { user_id } = req.body;
     
-    const rule = await Rule.findOne({ rule_code });
+    const rule = await Rule.findOne({ where: { rule_code } });
     if (!rule) {
       return res.status(404).json({
         success: false,
@@ -339,14 +336,11 @@ router.post('/rules/:rule_code/analyze', async (req, res) => {
       });
     }
     
-    // Add to processing queue for LLM analysis
-    // await queue.add('process-rule', { rule_data: rule.toObject(), user_id });
-    
     res.json({
       success: true,
       message: 'Analisis aturan telah dimulai',
       data: {
-        rule_id: rule._id,
+        rule_id: rule.id,
         status: 'queued'
       }
     });
@@ -363,7 +357,7 @@ router.get('/rules/:rule_code/conflicts', async (req, res) => {
   try {
     const { rule_code } = req.params;
     
-    const rule = await Rule.findOne({ rule_code });
+    const rule = await Rule.findOne({ where: { rule_code } });
     if (!rule) {
       return res.status(404).json({
         success: false,
@@ -371,23 +365,16 @@ router.get('/rules/:rule_code/conflicts', async (req, res) => {
       });
     }
     
-    // Find similar rules using text search
-    const similarRules = await Rule.aggregate([
-      {
-        $text: { $search: rule.title }
+    // Find similar rules using ILIKE search on title
+    const similarRules = await Rule.findAll({
+      attributes: ['id', 'title', 'rule_code', 'regime', 'category'],
+      where: {
+        rule_code: { [Op.ne]: rule_code },
+        title: { [Op.iLike]: `%${rule.title.split(' ').slice(0, 3).join(' ')}%` }
       },
-      {
-        $project: {
-          title: 1,
-          rule_code: 1,
-          regime: 1,
-          category: 1,
-          score: { $meta: 'textScore' }
-        }
-      },
-      { $sort: { score: { $meta: 'textScore' }, score: -1 } },
-      { $limit: 10 }
-    ]);
+      limit: 10,
+      raw: true
+    });
     
     res.json({
       success: true,
@@ -407,10 +394,17 @@ router.get('/rules/:rule_code/conflicts', async (req, res) => {
 // GET /api/regimes - Get all regimes for filter
 router.get('/regimes', async (req, res) => {
   try {
-    const regimes = await Rule.distinct('regime');
+    const { sequelize } = require('../models/Rule');
+    const regimes = await Rule.findAll({
+      attributes: [[sequelize.fn('DISTINCT', sequelize.col('regime')), 'regime']],
+      where: { regime: { [Op.ne]: null } },
+      raw: true
+    });
+    const regimeList = regimes.map(r => r.regime).sort();
+    
     res.json({
       success: true,
-      data: regimes.sort()
+      data: regimeList
     });
   } catch (error) {
     res.status(500).json({
@@ -423,10 +417,17 @@ router.get('/regimes', async (req, res) => {
 // GET /api/categories - Get all categories for filter
 router.get('/categories', async (req, res) => {
   try {
-    const categories = await Rule.distinct('category');
+    const { sequelize } = require('../models/Rule');
+    const categories = await Rule.findAll({
+      attributes: [[sequelize.fn('DISTINCT', sequelize.col('category')), 'category']],
+      where: { category: { [Op.ne]: null } },
+      raw: true
+    });
+    const categoryList = categories.map(c => c.category).sort();
+    
     res.json({
       success: true,
-      data: categories.sort()
+      data: categoryList
     });
   } catch (error) {
     res.status(500).json({

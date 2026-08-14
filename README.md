@@ -7,6 +7,7 @@ Platform analisis integritas hukum dan pelacak kontradiksi regulasi otomatis ber
 ---
 
 ## 🌟 Fitur Utama
+
 - **Autonomous Legal Scraper Pipeline**: Otomasi unduh PDF dari JDIHN, DPR, Setneg, DPRD, dan Pemprov.
 - **Local RAG & Conflict Matrix**: Memanfaatkan Local LLM (Ollama / DeepSeek / Mistral) untuk mendeteksi kontradiksi antar pasal tanpa biaya API.
 - **Interactive Hierarchy Graph**: Visualisasi pohon hubungan pasal utama ke aturan turunan (PP, Perpres, Perda).
@@ -18,6 +19,7 @@ Platform analisis integritas hukum dan pelacak kontradiksi regulasi otomatis ber
 ## 🚀 Panduan Ingestion & Scraping PDF Aturan
 
 ### 1. Prasyarat Scraping (Python 3.10+)
+
 ```bash
 pip install requests beautifulsoup4 playwright pytesseract pdf2image
 playwright install
@@ -46,4 +48,4 @@ cd server && npm run dev
 cd client && npm start
 
 ---
-
+```
