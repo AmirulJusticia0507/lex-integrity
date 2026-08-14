@@ -100,13 +100,21 @@ const DashboardOverview = () => {
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Server Logs</h3>
           <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-64 overflow-y-auto">
             <div>✅ Server berjalan di port 3000</div>
-            <div>✅ Terhubung ke MongoDB</div>
+            <div>✅ Terhubung ke PostgreSQL</div>
             <div>✅ Terhubung ke Redis</div>
-            <div>⚠️ Queue sedang memproses pekerjaan</div>
-            <div>❌ Ollama tidak tersedia</div>
             <div>✅ API v1 aktif</div>
             <div>✅ Rate limiting diaktifkan</div>
             <div>✅ CORS dikonfigurasi</div>
+            {systemHealth.ollama === 'healthy' ? (
+              <div>✅ Ollama tersedia</div>
+            ) : (
+              <div>❌ Ollama tidak tersedia</div>
+            )}
+            {systemHealth.queue === 'healthy' ? (
+              <div>✅ Queue aktif</div>
+            ) : (
+              <div>⚠️ Queue belum aktif</div>
+            )}
           </div>
         </div>
         

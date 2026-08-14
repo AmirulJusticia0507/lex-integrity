@@ -437,4 +437,42 @@ router.get('/categories', async (req, res) => {
   }
 });
 
+// GET /api/queue/stats - Get Bull queue statistics
+router.get('/queue/stats', async (req, res) => {
+  try {
+    const Bull = require('bull');
+    const queue = new Bull('rule processing', {
+      redis: {
+        port: parseInt(process.env.REDIS_PORT) || 6379,
+        host: process.env.REDIS_HOST || 'localhost',
+        password: process.env.REDIS_PASSWORD || undefined
+      }
+    });
+
+    const [waiting, active, completed, failed] = await Promise.all([
+      queue.getWaitingCount(),
+      queue.getActiveCount(),
+      queue.getCompletedCount(),
+      queue.getFailedCount()
+    ]);
+
+    await queue.close();
+
+    res.json({
+      success: true,
+      data: {
+        waiting,
+        active,
+        completed,
+        failed
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
