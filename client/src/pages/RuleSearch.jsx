@@ -11,33 +11,23 @@ const RuleSearch = () => {
     dateRange: { start: '', end: '' }
   });
   
-  const { searchRules, searchResults, regimes, categories, fetchRegimes, fetchCategories } = useRuleStore();
+  const { searchRules, searchResults, regimes, categories, fetchRegimes, fetchCategories, loading } = useRuleStore();
   
   useEffect(() => {
-    if (searchTerm.length >= 2) {
-      searchRules(searchTerm);
-    }
-  }, [searchTerm, selectedFilters]);
+    fetchRegimes();
+    fetchCategories();
+  }, [fetchRegimes, fetchCategories]);
   
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      searchRules(searchTerm);
+  useEffect(() => {
+    if (searchTerm.trim().length >= 2) {
+      searchRules(searchTerm, selectedFilters);
     }
-  };
-  
-  const getFilteredResults = () => {
-    return searchResults.filter(rule => {
-      const matchesRegime = selectedFilters.regime === 'all' || rule.regime === selectedFilters.regime;
-      const matchesCategory = selectedFilters.category === 'all' || rule.category === selectedFilters.category;
-      return matchesRegime && matchesCategory;
-    });
-  };
+  }, [searchTerm, selectedFilters, searchRules]);
   
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg p-6">
-        <form onSubmit={handleSearch} className="space-y-4">
+        <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <input
@@ -86,15 +76,15 @@ const RuleSearch = () => {
         <div className="bg-white rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">
-              Hasil Pencarian ({getFilteredResults().length} peraturan ditemukan)
+              Hasil Pencarian ({searchResults.length} peraturan ditemukan)
             </h3>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {getFilteredResults().map(rule => (
+            {searchResults.map(rule => (
               <div key={rule.rule_code} className="relative">
                 <RuleCard rule={rule} />
-                {rule.loopholes.length > 0 && (
+                {rule.loopholes && rule.loopholes.length > 0 && (
                   <div className="absolute top-2 right-2">
                     <AlertTriangle className="h-5 w-5 text-yellow-500" />
                   </div>
@@ -103,7 +93,7 @@ const RuleSearch = () => {
             ))}
           </div>
           
-          {getFilteredResults().length === 0 && (
+          {searchResults.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               Tidak ada peraturan yang ditemukan
             </div>

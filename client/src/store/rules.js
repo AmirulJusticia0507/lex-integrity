@@ -130,10 +130,16 @@ function RuleProvider({ children }) {
     }
   }, []);
   
-  const searchRules = useCallback(async (query) => {
+  const searchRules = useCallback(async (query, filters = {}) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/rules/search/suggestions?q=${query}`);
+      const queryParams = new URLSearchParams({ search: query, limit: 100 });
+      Object.keys(filters).forEach(key => {
+        if (filters[key] && filters[key] !== 'all') {
+          queryParams.append(key, filters[key]);
+        }
+      });
+      const response = await axios.get(`${API_BASE_URL}/api/rules?${queryParams.toString()}`);
       dispatch({ type: 'SET_SEARCH_RESULTS', payload: response.data.data });
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error.message });
