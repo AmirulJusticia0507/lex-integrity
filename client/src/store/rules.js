@@ -177,7 +177,7 @@ function RuleProvider({ children }) {
   
   const analyzeConflicts = useCallback(async (regime) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/rules/${regime}/conflicts`);
+      const response = await axios.get(`${API_BASE_URL}/api/analytics/matrix?regime=${regime}`);
       return response.data.data;
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error.message });

@@ -10,12 +10,17 @@ const LegalMatrix = () => {
   
   useEffect(() => {
     fetchRegimes();
+    handleRegimeChange('all');
   }, []);
   
   const handleRegimeChange = async (regime) => {
     setSelectedRegime(regime);
-    const conflicts = await analyzeConflicts(regime);
-    setMatrixData(conflicts);
+    try {
+      const conflicts = await analyzeConflicts(regime);
+      setMatrixData(conflicts);
+    } catch (e) {
+      console.error('Gagal load matrix:', e.message);
+    }
   };
   
   return (

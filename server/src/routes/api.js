@@ -392,6 +392,71 @@ router.get('/rules/:rule_code/conflicts', async (req, res) => {
   }
 });
 
+// GET /api/analytics/matrix - Laporan celah & risiko (critical loopholes + popular regulations)
+router.get('/analytics/matrix', async (req, res) => {
+  try {
+    const { regime } = req.query;
+    const where = {};
+    if (regime && regime !== 'all') where.regime = regime;
+
+    // Regime conflicts: jumlah rules per regime yang punya loopholes
+    const rules = await Rule.findAll({
+      attributes: ['id', 'regime', 'category', 'loopholes', 'view_count', 'publish_date', 'title'],
+      where
+    });
+
+    const regimeConflictMap = {};
+    const criticalCount = {};
+    rules.forEach(r => {
+      if (!r.regime) return;
+      const arr = Array.isArray(r.loopholes) ? r.loopholes : [];
+      if (arr.length > 0) {
+        regimeConflictMap[r.regime] = (regimeConflictMap[r.regime] || 0) + 1;
+        arr.forEach(l => {
+          const text = String(l).trim();
+          if (text) criticalCount[text] = (criticalCount[text] || 0) + 1;
+        });
+      }
+    });
+
+    const regime_conflicts = Object.entries(regimeConflictMap)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    const timeMap = {};
+    rules.forEach(r => {
+      if (r.publish_date) {
+        const year = String(r.publish_date).slice(0, 4);
+        timeMap[year] = (timeMap[year] || 0) + 1;
+      }
+    });
+    const time_series = Object.entries(timeMap)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const critical_loopholes = Object.entries(criticalCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([text]) => text);
+
+    const popular_regulations = rules
+      .filter(r => r.view_count > 0)
+      .sort((a, b) => b.view_count - a.view_count)
+      .slice(0, 5)
+      .map(r => ({ title: r.title, view_count: r.view_count }));
+
+    res.json({
+      success: true,
+      data: { regime_conflicts, time_series, critical_loopholes, popular_regulations }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // GET /api/regimes - Get all regimes for filter
 router.get('/regimes', async (req, res) => {
   try {
