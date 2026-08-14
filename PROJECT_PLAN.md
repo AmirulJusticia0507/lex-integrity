@@ -154,7 +154,9 @@ Platform analisis integritas hukum dan pelacak kontradiksi regulasi otomatis ber
   "version": "1.0.0",
   "dependencies": {
     "express": "^4.18.2",
-    "mongoose": "^8.5.1",
+    "pg": "^8.23.0",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.8",
     "cors": "^2.8.5",
     "helmet": "^7.0.0",
     "express-rate-limit": "^6.7.0",

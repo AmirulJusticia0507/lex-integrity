@@ -65,8 +65,7 @@ app.get('/health', async (req, res) => {
   }
   
   try {
-    const Rule = require('./models/Rule');
-    const sequelize = Rule.sequelize;
+    const sequelize = require('./config/database');
     await sequelize.authenticate();
     const [results] = await sequelize.query('SELECT COUNT(*) as cnt FROM rules');
     const count = results[0].cnt || 0;
@@ -147,13 +146,9 @@ const startServer = async () => {
     await redis.connect();
     
     // Sync database tables
-    const Rule = require('./models/Rule');
-    const User = require('./models/User');
-    const Analytics = require('./models/Analytics');
+    const { sequelize } = require('./models');
     
-    await Rule.sync();
-    await User.sync();
-    await Analytics.sync();
+    await sequelize.sync();
     console.log('📊 Database tables synced');
     
     const server = app.listen(PORT, () => {

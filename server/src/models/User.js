@@ -1,10 +1,5 @@
-const { Sequelize, DataTypes } = require('sequelize');
-const sequelize = new Sequelize('lex_integrity', 'postgres', 'admin123', {
-  host: 'localhost',
-  dialect: 'postgres',
-  port: 5432,
-  logging: false
-});
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
 const User = sequelize.define('User', {
   id: {
@@ -38,9 +33,5 @@ const User = sequelize.define('User', {
   tableName: 'users',
   timestamps: false
 });
-
-User.sync()
-  .then(() => console.log('User table synced'))
-  .catch(err => console.error('Sync error:', err));
 
 module.exports = User;

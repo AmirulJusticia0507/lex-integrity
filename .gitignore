@@ -17,7 +17,7 @@ dist/
 build/
 coverage/
 
-# MongoDB data
+# Database data
 data/
 
 # OS files

@@ -1,4 +1,5 @@
 const { Op } = require('sequelize');
+const { sequelize } = require('../models');
 const Rule = require('../models/Rule');
 
 class RuleController {
@@ -195,8 +196,6 @@ class RuleController {
 
   async getRuleAnalytics(req, res) {
     try {
-      const sequelize = Rule.sequelize;
-
       const totalRules = await Rule.count();
 
       const rulesByRegime = await Rule.findAll({

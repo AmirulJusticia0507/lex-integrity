@@ -1,10 +1,5 @@
-const { Sequelize, DataTypes } = require('sequelize');
-const sequelize = new Sequelize('lex_integrity', 'postgres', 'admin123', {
-  host: 'localhost',
-  dialect: 'postgres',
-  port: 5432,
-  logging: false
-});
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
 const Analytics = sequelize.define('Analytics', {
   id: {
@@ -21,20 +16,27 @@ const Analytics = sequelize.define('Analytics', {
     allowNull: false
   },
   entity_id: {
-    type: DataTypes.INTEGER // Assuming entity_id refers to Rule ID
+    type: DataTypes.INTEGER
   },
-  user_id: { type: DataTypes.INTEGER },
-  metadata: DataTypes.JSONB,
-  ip_address: DataTypes.STRING(45),
-  user_agent: DataTypes.TEXT,
-  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+  user_id: {
+    type: DataTypes.INTEGER
+  },
+  metadata: {
+    type: DataTypes.JSONB
+  },
+  ip_address: {
+    type: DataTypes.STRING(45)
+  },
+  user_agent: {
+    type: DataTypes.TEXT
+  },
+  created_at: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
+  }
 }, {
   tableName: 'analytics',
   timestamps: false
 });
-
-Analytics.sync()
-  .then(() => console.log('Analytics table synced'))
-  .catch(err => console.error('Sync error:', err));
 
 module.exports = Analytics;

@@ -1,10 +1,5 @@
-const { Sequelize, DataTypes } = require('sequelize');
-const sequelize = new Sequelize('lex_integrity', 'postgres', 'admin123', {
-  host: 'localhost',
-  dialect: 'postgres',
-  port: 5432,
-  logging: false,  // Set true kalau mau log query di console
-});
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
 const Rule = sequelize.define('Rule', {
   id: {
@@ -86,12 +81,7 @@ const Rule = sequelize.define('Rule', {
   }
 }, {
   tableName: 'rules',
-  timestamps: false  // Karena udah ada created_at/updated_at manual
+  timestamps: false
 });
-
-// Sync model ke database (buat tabel kalau blom ada)
-Rule.sync()
-  .then(() => console.log('Rule table synced'))
-  .catch(err => console.error('Sync error:', err));
 
 module.exports = Rule;

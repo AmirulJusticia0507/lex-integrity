@@ -1,10 +1,9 @@
 // Analytics utilities
 const { Op } = require('sequelize');
+const { sequelize } = require('../models');
 const Rule = require('../models/Rule');
 
 const getAnalytics = async () => {
-  const sequelize = Rule.sequelize;
-  
   const totalRules = await Rule.count();
   
   const rulesByRegime = await Rule.findAll({

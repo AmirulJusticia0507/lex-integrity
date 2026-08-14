@@ -1,5 +1,6 @@
 const express = require('express');
 const { Op } = require('sequelize');
+const { sequelize } = require('../models');
 const Rule = require('../models/Rule');
 const Analytics = require('../models/Analytics');
 
@@ -199,8 +200,6 @@ router.delete('/rules/:rule_code', async (req, res) => {
 // GET /api/rules/analytics/overview - Get analytics overview
 router.get('/rules/analytics/overview', async (req, res) => {
   try {
-    const { sequelize } = require('../models/Rule');
-    
     const totalRules = await Rule.count();
     
     const rulesByRegime = await Rule.findAll({
@@ -634,9 +633,7 @@ router.post('/actions/clear-cache', async (req, res) => {
 
 // GET /api/regimes - Get all regimes for filter
 router.get('/regimes', async (req, res) => {
-  try {
-    const { sequelize } = require('../models/Rule');
-    const regimes = await Rule.findAll({
+  try {const regimes = await Rule.findAll({
       attributes: [[sequelize.fn('DISTINCT', sequelize.col('regime')), 'regime']],
       where: { regime: { [Op.ne]: null } },
       raw: true
@@ -657,9 +654,7 @@ router.get('/regimes', async (req, res) => {
 
 // GET /api/categories - Get all categories for filter
 router.get('/categories', async (req, res) => {
-  try {
-    const { sequelize } = require('../models/Rule');
-    const categories = await Rule.findAll({
+  try {const categories = await Rule.findAll({
       attributes: [[sequelize.fn('DISTINCT', sequelize.col('category')), 'category']],
       where: { category: { [Op.ne]: null } },
       raw: true

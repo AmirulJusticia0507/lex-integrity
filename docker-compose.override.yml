@@ -1,0 +1,19 @@
+# Docker Compose override for development
+version: '3.8'
+
+services:
+  backend:
+    volumes:
+      - ./server:/app/server
+      - /app/server/node_modules
+    environment:
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+      - "9229:9229"
+
+  redis:
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - redis_data:/data
+      - ./server/config/redis.conf:/usr/local/etc/redis/redis.conf:ro
