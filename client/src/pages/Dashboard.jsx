@@ -26,8 +26,8 @@ const Dashboard = () => {
         <PieChart data={stats.category_distribution} title="Distribusi Kategori" />
       </div>
       
-      <div className="bg-white rounded-lg p-6">
-        <h3 className="text-lg font-semibold mb-4">Peraturan Terbaru</h3>
+      <div className="bg-white rounded-lg p-6 dark:bg-gray-800">
+        <h3 className="text-lg font-semibold mb-4 dark:text-gray-100">Peraturan Terbaru</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {rules.map(rule => (
             <RuleCard key={rule.rule_code} rule={rule} />
@@ -39,11 +39,11 @@ const Dashboard = () => {
 };
 
 const StatCard = ({ title, value, icon: Icon }) => (
-  <div className="bg-white rounded-lg p-6">
+  <div className="bg-white rounded-lg p-6 dark:bg-gray-800">
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-sm text-gray-600">{title}</p>
-        <p className="text-2xl font-bold">{value}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{title}</p>
+        <p className="text-2xl font-bold dark:text-gray-100">{value}</p>
       </div>
       <Icon className="h-8 w-8 text-blue-600" />
     </div>

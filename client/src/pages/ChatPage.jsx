@@ -104,37 +104,37 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-white rounded-2xl p-6 mb-6 shadow-lg">
+        <div className="bg-white rounded-2xl p-6 mb-6 shadow-lg dark:bg-gray-800">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">Chat dengan AI</h1>
-              <p className="text-sm text-gray-500">Berdasarkan peraturan hukum Indonesia</p>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2 dark:text-gray-100">Chat dengan AI</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Berdasarkan peraturan hukum Indonesia</p>
             </div>
             {messages.length > 0 && (
               <button
                 onClick={clearToday}
-                className="text-sm text-red-600 hover:text-red-800 transition-colors"
+                className="text-sm text-red-600 hover:text-red-800 transition-colors dark:text-red-400 dark:hover:text-red-300"
               >
                 Hapus Percakapan Hari Ini
               </button>
             )}
           </div>
           {ruleTitle && (
-            <div className="mt-4 flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-lg p-3">
-              <FileText className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+            <div className="mt-4 flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-lg p-3 dark:bg-gray-700 dark:border-orange-900">
+              <FileText className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0 dark:text-orange-400" />
               <div>
-                <p className="text-sm font-medium text-orange-800">
+                <p className="text-sm font-medium text-orange-800 dark:text-orange-300">
                   Menanyakan tentang: {ruleTitle}
                 </p>
-                <p className="text-xs text-orange-600">Kode: {ruleCode}</p>
+                <p className="text-xs text-orange-600 dark:text-orange-400">Kode: {ruleCode}</p>
               </div>
             </div>
           )}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg h-[500px] w-full overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-lg h-[500px] w-full overflow-hidden dark:bg-gray-800">
           <div className="p-4 overflow-y-auto h-full">
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full text-gray-400">
@@ -147,8 +147,8 @@ const ChatPage = () => {
 
             {messages.map((msg) => {
               const isUser = msg.type === 'user';
-              const bgClass = isUser ? 'bg-blue-500' : 'bg-gray-200';
-              const textClass = isUser ? 'text-white' : 'text-gray-800';
+              const bgClass = isUser ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-600';
+              const textClass = isUser ? 'text-white' : 'text-gray-800 dark:text-gray-100';
 
               return (
                 <div key={msg.id} className="flex items-start mb-3">
@@ -173,7 +173,7 @@ const ChatPage = () => {
 
         <form
           onSubmit={sendMessage}
-          className="mt-6 bg-white rounded-2xl p-4 shadow-sm border-t border-gray-200"
+          className="mt-6 bg-white rounded-2xl p-4 shadow-sm border-t border-gray-200 dark:bg-gray-800 dark:border-gray-700"
         >
           <div className="flex gap-3">
             <input
@@ -182,7 +182,7 @@ const ChatPage = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={isLoading}
-              className="flex-1 border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               maxLength={500}
             />
             <button

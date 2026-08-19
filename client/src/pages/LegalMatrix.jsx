@@ -25,12 +25,12 @@ const LegalMatrix = () => {
   
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4">Analisis Konflik Hukum</h2>
+      <div className="bg-white rounded-lg p-6 dark:bg-gray-800">
+        <h2 className="text-2xl font-bold mb-4 dark:text-gray-100">Analisis Konflik Hukum</h2>
         <div className="flex flex-wrap gap-2 mb-6">
           <button
             onClick={() => handleRegimeChange('all')}
-            className={`px-4 py-2 rounded-lg transition-colors ${selectedRegime === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+            className={`px-4 py-2 rounded-lg transition-colors ${selectedRegime === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200'}`}
           >
             Semua Era
           </button>
@@ -38,7 +38,7 @@ const LegalMatrix = () => {
             <button
               key={regime}
               onClick={() => handleRegimeChange(regime)}
-              className={`px-4 py-2 rounded-lg transition-colors ${selectedRegime === regime ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+              className={`px-4 py-2 rounded-lg transition-colors ${selectedRegime === regime ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200'}`}
             >
               {regime}
             </button>
@@ -47,8 +47,8 @@ const LegalMatrix = () => {
       </div>
       
       {matrixData && (
-        <div className="bg-white rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Matriks Kontradiksi</h3>
+        <div className="bg-white rounded-lg p-6 dark:bg-gray-800">
+          <h3 className="text-lg font-semibold mb-4 dark:text-gray-100">Matriks Kontradiksi</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <BarChart 
               data={matrixData.regime_conflicts} 
@@ -62,8 +62,8 @@ const LegalMatrix = () => {
         </div>
       )}
       
-      <div className="bg-white rounded-lg p-6">
-        <h3 className="text-lg font-semibold mb-4">Laporan Celah & Risiko</h3>
+      <div className="bg-white rounded-lg p-6 dark:bg-gray-800">
+        <h3 className="text-lg font-semibold mb-4 dark:text-gray-100">Laporan Celah & Risiko</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <h4 className="font-medium mb-2">Loopholes Paling Kritis</h4>

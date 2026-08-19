@@ -27,32 +27,32 @@ const RuleGraph = ({ rules = [] }) => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 flex flex-wrap gap-3 p-4 border rounded-lg min-h-[200px]">
+      <div className="lg:col-span-2 flex flex-wrap gap-3 p-4 border rounded-lg min-h-[200px] dark:border-gray-700">
         {nodes.length === 0 && (
-          <p className="text-gray-500">Tidak ada peraturan untuk ditampilkan</p>
+          <p className="text-gray-500 dark:text-gray-400">Tidak ada peraturan untuk ditampilkan</p>
         )}
         {nodes.map((node) => (
           <button
             key={node.id}
             onClick={() => setSelectedRule(node.id === selectedRule ? null : node.id)}
-            className={`px-4 py-2 rounded-full border text-sm transition-colors ${getCategoryColor(node.category)} ${selectedRule === node.id ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
+            className={`px-4 py-2 rounded-full border text-sm transition-colors ${getCategoryColor(node.category)} ${selectedRule === node.id ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-800' : ''}`}
           >
             {node.label}
           </button>
         ))}
       </div>
 
-      <div className="p-4 border rounded-lg">
-        <h4 className="font-semibold text-gray-800 mb-3">Detail Aturan</h4>
+      <div className="p-4 border rounded-lg dark:border-gray-700">
+        <h4 className="font-semibold text-gray-800 mb-3 dark:text-gray-100">Detail Aturan</h4>
         {selectedNode ? (
-          <div className="space-y-2 text-sm">
+          <div className="space-y-2 text-sm dark:text-gray-300">
             <p><span className="font-medium">Kode:</span> {selectedNode.id}</p>
             <p><span className="font-medium">Judul:</span> {selectedNode.label}</p>
             <p><span className="font-medium">Kategori:</span> {selectedNode.category}</p>
             <p><span className="font-medium">Era:</span> {selectedNode.regime}</p>
           </div>
         ) : (
-          <p className="text-gray-500 text-sm">Klik salah satu aturan untuk melihat detail.</p>
+          <p className="text-gray-500 text-sm dark:text-gray-400">Klik salah satu aturan untuk melihat detail.</p>
         )}
       </div>
     </div>

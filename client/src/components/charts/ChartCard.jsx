@@ -52,8 +52,8 @@ const ChartCard = ({ title, type = 'line', data, height = 300 }) => {
   };
   
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">{title}</h3>
+    <div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-800">
+      <h3 className="text-lg font-semibold text-gray-800 mb-4 dark:text-gray-100">{title}</h3>
       <div style={{ height: `${height}px` }}>
         <ResponsiveContainer width="100%" height="100%">
           {renderChart()}

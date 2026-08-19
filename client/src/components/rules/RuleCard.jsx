@@ -45,7 +45,7 @@ const RuleCard = ({ rule }) => {
   };
   
   return (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 p-6">
+    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 p-6 dark:bg-gray-800">
       <div className="flex justify-between items-start mb-3">
         <div className="flex gap-2">
           <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getCategoryColor(rule.category)}`}>{
@@ -55,24 +55,24 @@ const RuleCard = ({ rule }) => {
             rule.regime
           }</span>
         </div>
-        <div className="flex items-center text-sm text-gray-500">
+        <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
           <FileText className="h-4 w-4 mr-1" />
           <span>{rule.view_count || 0} kali dilihat</span>
         </div>
       </div>
       
-      <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">
+      <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2 dark:text-gray-100">
         {rule.title}
       </h3>
       
-      <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+      <p className="text-sm text-gray-600 mb-4 line-clamp-3 dark:text-gray-400">
         {rule.content ? rule.content.substring(0, 150) : 'Konten belum tersedia'}
       </p>
       
       <div className="space-y-2 mb-4">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-600">Kode:</span>
-          <span className="font-mono font-medium">{rule.rule_code}</span>
+          <span className="text-gray-600 dark:text-gray-400">Kode:</span>
+          <span className="font-mono font-medium dark:text-gray-200">{rule.rule_code}</span>
         </div>
         
         {rule.loopholes && rule.loopholes.length > 0 && (
@@ -93,7 +93,7 @@ const RuleCard = ({ rule }) => {
         )}
       </div>
       
-      <div className="flex justify-between items-center pt-4 border-t border-gray-100">
+      <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-gray-700">
         <button
           onClick={() => navigate(`/rules/${rule.rule_code}`)}
           className="text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors"

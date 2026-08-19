@@ -67,7 +67,7 @@ const RuleDetail = () => {
 
   if (error && !rule) {
     return (
-      <div className="bg-white rounded-lg p-10 text-center">
+      <div className="bg-white rounded-lg p-10 text-center dark:bg-gray-800">
         <p className="text-red-600 mb-4">{error}</p>
         <button
           onClick={() => navigate('/rules')}
@@ -83,27 +83,27 @@ const RuleDetail = () => {
     <div className="space-y-6">
       <button
         onClick={() => navigate('/rules')}
-        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors dark:text-gray-400 dark:hover:text-gray-100"
       >
         <ArrowLeft className="h-4 w-4" />
         Kembali ke Explorer
       </button>
 
-      <div className="bg-white rounded-lg p-6">
+      <div className="bg-white rounded-lg p-6 dark:bg-gray-800">
         <div className="flex flex-wrap gap-2 mb-4">
           <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">{rule.category}</span>
           <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">{rule.regime}</span>
           <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">{rule.rule_code}</span>
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">{rule.title}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-4 dark:text-gray-100">{rule.title}</h1>
 
-        <p className="text-gray-700 whitespace-pre-wrap mb-6">{rule.content}</p>
+        <p className="text-gray-700 whitespace-pre-wrap mb-6 dark:text-gray-300">{rule.content}</p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {rule.loopholes && rule.loopholes.length > 0 && (
-            <div className="border rounded-lg p-4">
-              <h3 className="flex items-center gap-2 font-semibold text-gray-800 mb-3">
+            <div className="border rounded-lg p-4 dark:border-gray-700">
+              <h3 className="flex items-center gap-2 font-semibold text-gray-800 mb-3 dark:text-gray-100">
                 <AlertTriangle className="h-5 w-5 text-yellow-500" />
                 Loopholes / Pasal Karet
               </h3>
@@ -118,11 +118,11 @@ const RuleDetail = () => {
           )}
 
           {rule.impacts && rule.impacts.length > 0 && (
-            <div className="border rounded-lg p-4">
-              <h3 className="font-semibold text-gray-800 mb-3">Dampak</h3>
+            <div className="border rounded-lg p-4 dark:border-gray-700">
+              <h3 className="font-semibold text-gray-800 mb-3 dark:text-gray-100">Dampak</h3>
               <ul className="space-y-2">
                 {rule.impacts.map((item, i) => (
-                  <li key={i} className="text-sm text-gray-700 flex items-start">
+                  <li key={i} className="text-sm text-gray-700 flex items-start dark:text-gray-300">
                     <span className="mr-2">•</span>{item}
                   </li>
                 ))}
@@ -132,19 +132,19 @@ const RuleDetail = () => {
         </div>
 
         {rule.sanctions && (rule.sanctions.administrative || rule.sanctions.criminal) && (
-          <div className="border rounded-lg p-4 mt-6">
-            <h3 className="font-semibold text-gray-800 mb-3">Sanksi</h3>
+          <div className="border rounded-lg p-4 mt-6 dark:border-gray-700">
+            <h3 className="font-semibold text-gray-800 mb-3 dark:text-gray-100">Sanksi</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               {rule.sanctions.administrative && (
                 <div>
-                  <span className="text-gray-500">Administratif:</span>
-                  <span className="ml-2 text-gray-800">{rule.sanctions.administrative}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Administratif:</span>
+                  <span className="ml-2 text-gray-800 dark:text-gray-200">{rule.sanctions.administrative}</span>
                 </div>
               )}
               {rule.sanctions.criminal && (
                 <div>
-                  <span className="text-gray-500">Pidana:</span>
-                  <span className="ml-2 text-gray-800">{rule.sanctions.criminal}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Pidana:</span>
+                  <span className="ml-2 text-gray-800 dark:text-gray-200">{rule.sanctions.criminal}</span>
                 </div>
               )}
             </div>
@@ -162,7 +162,7 @@ const RuleDetail = () => {
           </button>
           <button
             onClick={handleLoadConflicts}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
           >
             <Search className="h-4 w-4" />
             Muat Kontradiksi
@@ -173,29 +173,29 @@ const RuleDetail = () => {
       </div>
 
       {conflicts && (
-        <div className="bg-white rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Hasil Analisis Kontradiksi</h3>
+        <div className="bg-white rounded-lg p-6 dark:bg-gray-800">
+          <h3 className="text-lg font-semibold mb-4 dark:text-gray-100">Hasil Analisis Kontradiksi</h3>
 
           <div className="mb-4">
-            <p className="text-sm text-gray-500">Peraturan sumber:</p>
-            <p className="font-medium text-gray-800">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Peraturan sumber:</p>
+            <p className="font-medium text-gray-800 dark:text-gray-200">
               {conflicts.source_rule?.title || rule.title}
             </p>
           </div>
 
-          <h4 className="font-medium text-gray-700 mb-3">Peraturan Serupa / Terkait</h4>
+          <h4 className="font-medium text-gray-700 mb-3 dark:text-gray-300">Peraturan Serupa / Terkait</h4>
           {conflicts.similar_rules && conflicts.similar_rules.length > 0 ? (
             <ul className="space-y-2">
               {conflicts.similar_rules.map((r) => (
                 <li key={r.rule_code || r.id}>
                   <Link
                     to={`/rules/${r.rule_code}`}
-                    className="flex items-start gap-2 p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-start gap-2 p-3 border rounded-lg hover:bg-gray-50 transition-colors dark:border-gray-700 dark:hover:bg-gray-700"
                   >
                     <FileText className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-gray-800">{r.title}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{r.title}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {r.rule_code} • {r.regime} • {r.category}
                       </p>
                     </div>
@@ -204,7 +204,7 @@ const RuleDetail = () => {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Tidak ada peraturan serupa yang ditemukan.
             </p>
           )}

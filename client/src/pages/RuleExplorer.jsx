@@ -36,7 +36,7 @@ const RuleExplorer = () => {
   
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg p-6">
+      <div className="bg-white rounded-lg p-6 dark:bg-gray-800">
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -45,14 +45,14 @@ const RuleExplorer = () => {
               placeholder="Cari peraturan..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="pl-10 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             />
           </div>
           
           <select
             value={selectedFilters.regime}
             onChange={(e) => setSelectedFilters(prev => ({ ...prev, regime: e.target.value }))}
-            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
           >
             <option value="all">Semua Era</option>
             {regimes?.map(regime => (
@@ -63,7 +63,7 @@ const RuleExplorer = () => {
           <select
             value={selectedFilters.category}
             onChange={(e) => setSelectedFilters(prev => ({ ...prev, category: e.target.value }))}
-            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
           >
             <option value="all">Semua Kategori</option>
             {categories?.map(category => (
@@ -71,7 +71,7 @@ const RuleExplorer = () => {
             ))}
           </select>
           
-          <label className="flex items-center px-4 py-2 border rounded-lg cursor-pointer">
+          <label className="flex items-center px-4 py-2 border rounded-lg cursor-pointer dark:border-gray-600 dark:text-gray-300">
             <input
               type="checkbox"
               checked={selectedFilters.has_loopholes}
@@ -92,8 +92,8 @@ const RuleExplorer = () => {
       </div>
       
       {showGraph && (
-        <div className="bg-white rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Graf Relasi Peraturan</h3>
+        <div className="bg-white rounded-lg p-6 dark:bg-gray-800">
+          <h3 className="text-lg font-semibold mb-4 dark:text-gray-100">Graf Relasi Peraturan</h3>
           <RuleGraph rules={filteredRules} />
         </div>
       )}

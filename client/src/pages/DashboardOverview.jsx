@@ -85,18 +85,18 @@ const DashboardOverview = () => {
   
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Sistem Kesehatan</h2>
+      <div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-800">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4 dark:text-gray-100">Sistem Kesehatan</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {systemMetrics.map((metric, index) => (
-            <div key={index} className="flex items-center p-4 border rounded-lg hover:shadow-md transition-shadow">
-              <metric.icon className="h-8 w-8 text-gray-600 mr-4" />
+            <div key={index} className="flex items-center p-4 border rounded-lg hover:shadow-md transition-shadow dark:border-gray-700">
+              <metric.icon className="h-8 w-8 text-gray-600 mr-4 dark:text-gray-400" />
               <div className="flex-1">
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm font-medium text-gray-700">{metric.label}</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{metric.label}</span>
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(metric.status)}`}>{metric.status}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
                   <div 
                     className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: metric.value }}
@@ -109,8 +109,8 @@ const DashboardOverview = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Server Logs</h3>
+        <div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-800">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 dark:text-gray-100">Server Logs</h3>
           <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-64 overflow-y-auto">
             <div>✅ Server berjalan di port 3000</div>
             <div>✅ Terhubung ke PostgreSQL</div>
@@ -131,8 +131,8 @@ const DashboardOverview = () => {
           </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+        <div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-800">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 dark:text-gray-100">Quick Actions</h3>
           <div className="space-y-3">
             <button
               onClick={() => runAction('scrape', 'Scraping')}

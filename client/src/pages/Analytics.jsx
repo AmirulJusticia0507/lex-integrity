@@ -21,11 +21,11 @@ const Analytics = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Dashboard Analytics</h2>
+        <h2 className="text-2xl font-bold dark:text-gray-100">Dashboard Analytics</h2>
         <select
           value={timeRange}
           onChange={(e) => setTimeRange(e.target.value)}
-          className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
         >
           <option value="7d">Last 7 Days</option>
           <option value="30d">Last 30 Days</option>
@@ -36,11 +36,11 @@ const Analytics = () => {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statsCards.map((card, index) => (
-          <div key={index} className="bg-white rounded-lg p-6">
+          <div key={index} className="bg-white rounded-lg p-6 dark:bg-gray-800">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">{card.title}</p>
-                <p className="text-2xl font-bold">{card.value}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{card.title}</p>
+                <p className="text-2xl font-bold dark:text-gray-100">{card.value}</p>
               </div>
               <card.icon className="h-8 w-8 text-blue-600" />
             </div>

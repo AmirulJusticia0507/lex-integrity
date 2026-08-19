@@ -12,6 +12,7 @@ import Analytics from './pages/Analytics';
 import DashboardOverview from './pages/DashboardOverview';
 import DataManagement from './pages/DataManagement';
 import ChatPage from './pages/ChatPage';
+import About from './pages/About';
 import { Sidebar } from './components/layout';
 import './index.css';
 
@@ -20,7 +21,7 @@ function App() {
     <Router>
       <RuleProvider>
         <AnalyticsProvider>
-          <div className="min-h-screen bg-gray-50">
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
             <Sidebar />
             <main className="ml-64 p-8">
               <Routes>
@@ -33,6 +34,7 @@ function App() {
                 <Route path="/dashboard" element={<DashboardOverview />} />
                 <Route path="/data" element={<DataManagement />} />
                 <Route path="/chat" element={<ChatPage />} />
+                <Route path="/about" element={<About />} />
               </Routes>
             </main>
           </div>
