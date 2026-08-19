@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FileText, Scale, User, Bot, Send, Trash2, MessageSquare } from 'lucide-react';
+import { FileText, Scale, UserCircle, Bot, Send, Trash2, MessageSquare } from 'lucide-react';
 
 const ChatPage = () => {
   const [searchParams] = useSearchParams();
@@ -170,7 +170,7 @@ const ChatPage = () => {
                     isUser ? 'bg-gray-300 dark:bg-gray-500' : 'bg-blue-600'
                   }`}>
                     {isUser ? (
-                      <User className="h-4 w-4 text-white" />
+                      <UserCircle className="h-4 w-4 text-white" />
                     ) : (
                       <Bot className="h-4 w-4 text-white" />
                     )}
