@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, AlertTriangle, TrendingUp, Users, BarChart2, Search, Grid, Database, Settings, Info, Moon, Sun } from 'lucide-react';
+import { FileText, AlertTriangle, TrendingUp, Users, BarChart2, Search, Grid, Database, Settings, Info, Moon, Sun, UserCircle, ChevronDown, LogIn, KeyRound, ShieldCheck } from 'lucide-react';
 
 export const Sidebar = () => {
   const [dark, setDark] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('lex_dark_mode');
@@ -80,6 +81,57 @@ export const Sidebar = () => {
             <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Local LLM Mode</p>
             <p className="text-xs text-gray-600 dark:text-gray-400">100% Offline & Free</p>
           </div>
+        </div>
+
+        <div className="relative">
+          <button
+            onClick={() => setAccountOpen(!accountOpen)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors dark:border-gray-700 dark:hover:bg-gray-700"
+            aria-label="Menu Akun"
+          >
+            <span className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
+              <UserCircle className="h-5 w-5 mr-2" />
+              Akun
+            </span>
+            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${accountOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {accountOpen && (
+            <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg p-2 space-y-1 z-50 animate-fade-slide-down dark:bg-gray-800 dark:border-gray-700">
+              <a
+                href="/login"
+                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded hover:bg-blue-50 hover:text-blue-600 transition-colors dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400"
+              >
+                <LogIn className="h-4 w-4" />
+                Masuk
+              </a>
+              <a
+                href="/forgot-password"
+                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded hover:bg-blue-50 hover:text-blue-600 transition-colors dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400"
+              >
+                <KeyRound className="h-4 w-4" />
+                Lupa Password
+              </a>
+              <a
+                href="/reset-password"
+                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded hover:bg-blue-50 hover:text-blue-600 transition-colors dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400"
+              >
+                <KeyRound className="h-4 w-4" />
+                Reset Password
+              </a>
+              <div className="border-t border-gray-100 pt-1 mt-1 dark:border-gray-700">
+                <a
+                  href="https://trycap.dev/guide/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 rounded hover:bg-gray-50 transition-colors dark:text-gray-400 dark:hover:bg-gray-700"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  CAPTCHA Guide
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </aside>

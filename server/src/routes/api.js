@@ -918,4 +918,101 @@ router.put('/roles/:name', async (req, res) => {
   }
 });
 
+// POST /api/auth/login - Authenticate user and return JWT
+router.post('/auth/login', async (req, res) => {
+  try {
+    const { username_or_email, password } = req.body;
+
+    if (!username_or_email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Username/email dan password wajib diisi'
+      });
+    }
+
+    const user = await User.findOne({
+      where: {
+        [Op.or]: [{ username: username_or_email }, { email: username_or_email }]
+      }
+    });
+
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Username atau password salah' });
+    }
+
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      return res.status(401).json({ success: false, error: 'Username atau password salah' });
+    }
+
+    const { generateToken } = require('../middleware/auth');
+    const token = generateToken({ id: user.id, username: user.username, role: user.role });
+
+    res.json({
+      success: true,
+      message: 'Login berhasil',
+      data: {
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/auth/forgot-password - Request password reset (simulated)
+router.post('/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email wajib diisi' });
+    }
+
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Email tidak terdaftar' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Link reset password telah dikirim ke email Anda (simulasi).'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/auth/reset-password - Set a new password
+router.post('/auth/reset-password', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'Email dan password baru wajib diisi' });
+    }
+    if (String(password).length < 6) {
+      return res.status(400).json({ success: false, error: 'Password minimal 6 karakter' });
+    }
+
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Email tidak terdaftar' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await user.update({ password: hashedPassword });
+
+    res.json({ success: true, message: 'Password berhasil direset. Silakan login.' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;
