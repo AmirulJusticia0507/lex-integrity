@@ -1,5 +1,5 @@
 import React from 'react';
-import { Scale, FileText, Brain, Database, Cpu, Cloud, Shield, AlertTriangle, Search, BarChart2, GitBranch, Bot } from 'lucide-react';
+import { Scale, FileText, Brain, Database, Cpu, Cloud, Shield, AlertTriangle, Search, BarChart2, GitBranch, Bot, Github } from 'lucide-react';
 
 const About = () => {
   const stack = [
@@ -23,16 +23,27 @@ const About = () => {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-md p-8 dark:bg-gray-800">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center">
-            <Scale className="h-8 w-8 text-white" />
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center">
+              <Scale className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Lex-Integrity</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                AI Policy & Regulatory Compliance Matrix
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Lex-Integrity</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              AI Policy & Regulatory Compliance Matrix
-            </p>
-          </div>
+          <a
+            href="https://github.com/AmirulJusticia0507"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            <Github className="h-5 w-5" />
+            GitHub
+          </a>
         </div>
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
           Lex-Integrity adalah platform analisis kepatuhan regulasi berbasis AI untuk produk hukum
@@ -80,6 +91,16 @@ const About = () => {
             tidak ada data yang dikirim ke server pihak ketiga.
           </p>
         </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-md p-6 text-center dark:bg-gray-800">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          © {new Date().getFullYear()} <span className="font-medium text-gray-700 dark:text-gray-300">Amirul Putra Justicia</span>.
+          Hak cipta dilindungi.
+        </p>
+        <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">
+          Dibangun dengan AI-LLM terintegrasi — Ollama (Local LLM).
+        </p>
       </div>
     </div>
   );
