@@ -1,9 +1,23 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, AlertTriangle, TrendingUp, Users, BarChart2 } from 'lucide-react';
+import { FileText, AlertTriangle, TrendingUp, Users, BarChart2, Brain } from 'lucide-react';
+import { useRuleStore } from '../../store/rules';
 
 const RuleCard = ({ rule }) => {
   const navigate = useNavigate();
+  const { analyzeRule, clearError } = useRuleStore();
+  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+  
+  const handleAnalyze = async () => {
+    setIsAnalyzing(true);
+    try {
+      await analyzeRule(rule.rule_code);
+    } catch (error) {
+      clearError();
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
   
   const getCategoryColor = (category) => {
     const colors = {
@@ -91,6 +105,14 @@ const RuleCard = ({ rule }) => {
           className="text-gray-600 hover:text-gray-800 text-sm transition-colors"
         >
           Analisis Kontradiksi
+        </button>
+        <button
+          onClick={() => window.open(`/chat?rule_id=${rule.id}&rule_code=${encodeURIComponent(rule.rule_code)}&title=${encodeURIComponent(rule.title)}`, '_blank')}
+          className="text-orange-600 hover:text-orange-800 font-medium text-sm transition-colors flex items-center gap-1"
+          title="Tanya AI"
+        >
+          <Brain className="h-4 w-4" />
+          Tanya AI
         </button>
       </div>
     </div>
