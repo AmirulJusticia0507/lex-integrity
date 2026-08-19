@@ -4,9 +4,29 @@ const bcrypt = require('bcryptjs');
 const { sequelize } = require('../models');
 const Rule = require('../models/Rule');
 const User = require('../models/User');
+const Role = require('../models/Role');
 const Analytics = require('../models/Analytics');
 
 const router = express.Router();
+
+const ROLE_PERMISSIONS = [
+  'view_dashboard',
+  'view_rules',
+  'create_rules',
+  'edit_rules',
+  'delete_rules',
+  'analyze_rules',
+  'export_data',
+  'manage_backup',
+  'manage_users',
+  'manage_roles'
+];
+
+const DEFAULT_ROLES = {
+  admin: ROLE_PERMISSIONS,
+  analyst: ['view_dashboard', 'view_rules', 'create_rules', 'edit_rules', 'analyze_rules', 'export_data'],
+  user: ['view_dashboard', 'view_rules', 'analyze_rules', 'export_data']
+};
 
 // GET /api/rules - Get all rules with pagination and filters
 router.get('/rules', async (req, res) => {
@@ -778,6 +798,120 @@ router.post('/users', async (req, res) => {
         role: newUser.role,
         created_at: newUser.created_at
       }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /api/users/:id - Update a user account
+router.put('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { username, email, password, role } = req.body;
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Pengguna tidak ditemukan' });
+    }
+
+    const updates = {};
+    if (username) {
+      const dup = await User.findOne({ where: { username, id: { [Op.ne]: id } } });
+      if (dup) return res.status(409).json({ success: false, error: 'Username sudah digunakan' });
+      updates.username = username;
+    }
+    if (email) {
+      const dup = await User.findOne({ where: { email, id: { [Op.ne]: id } } });
+      if (dup) return res.status(409).json({ success: false, error: 'Email sudah terdaftar' });
+      updates.email = email;
+    }
+    if (password) {
+      if (String(password).length < 6) {
+        return res.status(400).json({ success: false, error: 'Password minimal 6 karakter' });
+      }
+      updates.password = await bcrypt.hash(password, 10);
+    }
+    if (role) updates.role = role;
+
+    await user.update(updates);
+
+    res.json({
+      success: true,
+      message: 'Akun berhasil diperbarui',
+      data: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        created_at: user.created_at
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// DELETE /api/users/:id - Delete a user account
+router.delete('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedCount = await User.destroy({ where: { id } });
+    if (deletedCount === 0) {
+      return res.status(404).json({ success: false, error: 'Pengguna tidak ditemukan' });
+    }
+    res.json({ success: true, message: 'Akun berhasil dihapus' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/roles - List roles with permissions (seed defaults if empty)
+router.get('/roles', async (req, res) => {
+  try {
+    const count = await Role.count();
+    if (count === 0) {
+      await Promise.all(Object.entries(DEFAULT_ROLES).map(([name, permissions]) =>
+        Role.create({ name, permissions })
+      ));
+    }
+    const roles = await Role.findAll({
+      attributes: ['id', 'name', 'permissions', 'created_at'],
+      order: [['name', 'ASC']],
+      raw: true
+    });
+    res.json({
+      success: true,
+      data: roles,
+      available_permissions: ROLE_PERMISSIONS
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /api/roles/:name - Update role permissions
+router.put('/roles/:name', async (req, res) => {
+  try {
+    const { name } = req.params;
+    const { permissions } = req.body;
+
+    if (!Array.isArray(permissions)) {
+      return res.status(400).json({ success: false, error: 'Permissions harus berupa array' });
+    }
+
+    const valid = permissions.filter(p => ROLE_PERMISSIONS.includes(p));
+    const role = await Role.findOne({ where: { name } });
+    if (!role) {
+      return res.status(404).json({ success: false, error: 'Role tidak ditemukan' });
+    }
+
+    await role.update({ permissions: valid });
+
+    res.json({
+      success: true,
+      message: `Perizinan role "${name}" berhasil diperbarui`,
+      data: { name: role.name, permissions: role.permissions }
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

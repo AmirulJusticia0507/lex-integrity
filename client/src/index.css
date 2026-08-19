@@ -56,6 +56,35 @@
   animation-delay: 0.3s;
 }
 
+.dark .recharts-cartesian-axis-tick text {
+  fill: #9ca3af;
+}
+
+.dark .recharts-cartesian-grid line {
+  stroke: #374151;
+}
+
+.dark .recharts-default-tooltip {
+  background-color: #1f2937 !important;
+  border-color: #4b5563 !important;
+}
+
+.dark .recharts-default-tooltip .recharts-tooltip-item {
+  color: #e5e7eb !important;
+}
+
+.dark .recharts-legend-item-text {
+  color: #d1d5db !important;
+}
+
+.dark .recharts-pie-label-text {
+  fill: #d1d5db !important;
+}
+
+.dark .recharts-pie-label-line {
+  stroke: #6b7280 !important;
+}
+
 @layer base {
   body {
     @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
