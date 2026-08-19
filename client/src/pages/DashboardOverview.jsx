@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Database, Brain, Cloud, Shield, Cpu } from 'lucide-react';
+import { Activity, Database, Brain, Cloud, Shield, Cpu, Download, Trash2, RefreshCw, PlayCircle } from 'lucide-react';
 
 const DashboardOverview = () => {
   const [systemHealth, setSystemHealth] = useState({
@@ -8,6 +8,7 @@ const DashboardOverview = () => {
     ollama: 'checking',
     queue: 'checking'
   });
+  const [actionState, setActionState] = useState({ loading: null, message: null, error: null });
   
   useEffect(() => {
     const checkSystemHealth = async () => {
@@ -33,6 +34,32 @@ const DashboardOverview = () => {
     
     return () => clearInterval(interval);
   }, []);
+  
+  const runAction = async (action, label) => {
+    setActionState({ loading: action, message: null, error: null });
+    try {
+      let res;
+      if (action === 'export') {
+        res = await fetch('/api/analytics/export?format=csv');
+        if (!res.ok) throw new Error('Gagal mengekspor data');
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rules_${Date.now()}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        setActionState({ loading: null, message: 'Data berhasil diekspor (CSV)', error: null });
+        return;
+      }
+      res = await fetch(`/api/actions/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Aksi gagal');
+      setActionState({ loading: null, message: data.message || `${label} selesai`, error: null });
+    } catch (error) {
+      setActionState({ loading: null, message: null, error: error.message });
+    }
+  };
   
   const systemMetrics = [
     { label: 'Database', value: '85%', icon: Database, status: systemHealth.database },
@@ -107,18 +134,49 @@ const DashboardOverview = () => {
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
           <div className="space-y-3">
-            <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              Mulai Scraping Baru
+            <button
+              onClick={() => runAction('scrape', 'Scraping')}
+              disabled={!!actionState.loading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              <PlayCircle className="h-4 w-4" />
+              {actionState.loading === 'scrape' ? 'Menjadwalkan...' : 'Mulai Scraping Baru'}
             </button>
-            <button className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-              Analisis Batch
+            <button
+              onClick={() => runAction('analyze-batch', 'Analisis Batch')}
+              disabled={!!actionState.loading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+            >
+              <Brain className="h-4 w-4" />
+              {actionState.loading === 'analyze-batch' ? 'Menjadwalkan...' : 'Analisis Batch'}
             </button>
-            <button className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-              Ekspor Data
+            <button
+              onClick={() => runAction('export', 'Ekspor')}
+              disabled={!!actionState.loading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" />
+              {actionState.loading === 'export' ? 'Mengekspor...' : 'Ekspor Data'}
             </button>
-            <button className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
-              Bersihkan Cache
+            <button
+              onClick={() => runAction('clear-cache', 'Bersihkan Cache')}
+              disabled={!!actionState.loading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              {actionState.loading === 'clear-cache' ? 'Membersihkan...' : 'Bersihkan Cache'}
             </button>
+            {actionState.message && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 text-green-700 text-sm">
+                <RefreshCw className="h-4 w-4" />
+                {actionState.message}
+              </div>
+            )}
+            {actionState.error && (
+              <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+                {actionState.error}
+              </div>
+            )}
           </div>
         </div>
       </div>
