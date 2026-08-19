@@ -1,7 +1,9 @@
 const express = require('express');
 const { Op } = require('sequelize');
+const bcrypt = require('bcryptjs');
 const { sequelize } = require('../models');
 const Rule = require('../models/Rule');
+const User = require('../models/User');
 const Analytics = require('../models/Analytics');
 
 const router = express.Router();
@@ -708,6 +710,77 @@ router.get('/queue/stats', async (req, res) => {
       success: false,
       error: error.message
     });
+  }
+});
+
+// GET /api/users - List all user accounts (without passwords)
+router.get('/users', async (req, res) => {
+  try {
+    const users = await User.findAll({
+      attributes: ['id', 'username', 'email', 'role', 'created_at'],
+      order: [['created_at', 'DESC']],
+      raw: true
+    });
+
+    res.json({ success: true, data: users });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/users - Create a new user account
+router.post('/users', async (req, res) => {
+  try {
+    const { username, email, password, role } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Field wajib (username, email, password) harus diisi'
+      });
+    }
+
+    if (String(password).length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password minimal 6 karakter'
+      });
+    }
+
+    const existing = await User.findOne({
+      where: { [Op.or]: [{ username }, { email }] }
+    });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        error: existing.username === username
+          ? 'Username sudah digunakan'
+          : 'Email sudah terdaftar'
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await User.create({
+      username,
+      email,
+      password: hashedPassword,
+      role: role || 'user'
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Akun berhasil dibuat',
+      data: {
+        id: newUser.id,
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role,
+        created_at: newUser.created_at
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
