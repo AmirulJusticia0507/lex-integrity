@@ -1,9 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, AlertTriangle, TrendingUp, Users, BarChart2, Search, Grid, Database, Settings, Info, Moon, Sun, UserCircle, ChevronDown, LogIn, KeyRound, ShieldCheck } from 'lucide-react';
+import { FileText, AlertTriangle, TrendingUp, Users, BarChart2, Search, Grid, Database, Settings, Info, Moon, Sun, UserCircle, ChevronDown, LogIn, KeyRound, ShieldCheck, LogOut } from 'lucide-react';
+import { useAuth } from '../auth/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export const Sidebar = () => {
   const [dark, setDark] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const { user, clearAuth } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    clearAuth();
+    navigate('/login', { replace: true });
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem('lex_dark_mode');
@@ -129,6 +138,16 @@ export const Sidebar = () => {
                   <ShieldCheck className="h-4 w-4" />
                   CAPTCHA Guide
                 </a>
+                {user && (
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 rounded hover:bg-red-50 transition-colors dark:text-red-400 dark:hover:bg-gray-800"
+                    aria-label="Keluar"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Keluar
+                  </button>
+                )}
               </div>
             </div>
           )}

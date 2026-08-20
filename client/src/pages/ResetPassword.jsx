@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Scale, Mail, Lock, Eye, EyeOff, ArrowLeft, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Scale, Mail, Eye, EyeOff, ArrowLeft, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import PasswordStrengthMeter, { validatePassword } from '../components/auth/PasswordStrengthMeter';
 
 const ResetPassword = () => {
   const [email, setEmail] = useState('');
@@ -13,8 +14,12 @@ const ResetPassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setResult(null);
-    if (password !== confirmPassword) {
+       if (password !== confirmPassword) {
       setResult({ success: false, message: 'Konfirmasi password tidak cocok' });
+      return;
+    }
+    if (!validatePassword(password)) {
+      setResult({ success: false, message: 'Password lemah. Gunakan minimal 8 karakter, huruf besar/kecil, angka, dan simbol.' });
       return;
     }
     setIsLoading(true);
@@ -90,49 +95,37 @@ const ResetPassword = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
-                Password Baru
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  placeholder="Minimal 6 karakter"
-                  className={inputClass}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  aria-label="Tampilkan password"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
+              <PasswordStrengthMeter
+            label="Password Baru"
+            name="password"
+            password={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
-                Konfirmasi Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  placeholder="Ulangi password baru"
-                  className={inputClass}
-                />
-              </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+              Konfirmasi Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={8}
+                placeholder="Ulangi password baru"
+                className={inputClass}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                aria-label="Tampilkan password"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
+          </div>
 
             <button
               type="submit"

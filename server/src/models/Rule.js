@@ -42,6 +42,14 @@ const Rule = sequelize.define('Rule', {
   pdf_url: {
     type: DataTypes.STRING(500)
   },
+  slug: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  download_count: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
   loopholes: {
     type: DataTypes.JSONB,
     defaultValue: []
