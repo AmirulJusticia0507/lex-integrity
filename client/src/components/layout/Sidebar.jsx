@@ -190,18 +190,42 @@ export const Sidebar = () => {
         <div className="absolute bottom-0 left-0 right-0 top-0 pt-16 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
           <div className="h-full flex flex-col">
             <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-sm font-bold">LI</span>
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">Lex-Integrity</h1>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">AI Regulatory Compliance</p>
+                  </div>
+                </div>
+              </div>
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-blue-500" />
                   Riwayat Chat
                 </h3>
-                <button
-                  onClick={createNewSession}
-                  className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 dark:hover:bg-blue-900/30 transition-colors"
-                  aria-label="Percakapan Baru"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <a
+                    href="/"
+                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 hover:text-blue-600"
+                    aria-label="Kembali ke Dashboard"
+                    title="Kembali ke Dashboard"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                      <polyline points="9 22 9 12 15 12" />
+                    </svg>
+                  </a>
+                  <button
+                    onClick={createNewSession}
+                    className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 dark:hover:bg-blue-900/30 transition-colors"
+                    aria-label="Percakapan Baru"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
 
