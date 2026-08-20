@@ -1,11 +1,15 @@
 const express = require('express');
 const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
 const { sequelize } = require('../models');
 const Rule = require('../models/Rule');
 const User = require('../models/User');
 const Role = require('../models/Role');
 const Analytics = require('../models/Analytics');
+
+const RATE_LIMIT_FILE = path.join(__dirname, '..', '..', 'rate-limit.json');
 
 const router = express.Router();
 
@@ -1010,6 +1014,62 @@ router.post('/auth/reset-password', async (req, res) => {
     await user.update({ password: hashedPassword });
 
     res.json({ success: true, message: 'Password berhasil direset. Silakan login.' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ── Rate Limit Settings ─────────────────────────────────────────────────────
+
+function readRateLimitSettings() {
+  try {
+    if (fs.existsSync(RATE_LIMIT_FILE)) {
+      return JSON.parse(fs.readFileSync(RATE_LIMIT_FILE, 'utf8'));
+    }
+  } catch (e) { /* ignore */ }
+  return { api: { enabled: true, windowMs: 60000, max: 100, label: 'Global API' } };
+}
+
+function writeRateLimitSettings(data) {
+  fs.writeFileSync(RATE_LIMIT_FILE, JSON.stringify(data, null, 2), 'utf8');
+}
+
+router.get('/settings/rate-limit', (req, res) => {
+  try {
+    const settings = readRateLimitSettings();
+    res.json({ success: true, data: settings });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.put('/settings/rate-limit', (req, res) => {
+  try {
+    const incoming = req.body;
+    if (!incoming || typeof incoming !== 'object') {
+      return res.status(400).json({ success: false, error: 'Data tidak valid' });
+    }
+
+    const current = readRateLimitSettings();
+    const merged = { ...current };
+
+    for (const [key, val] of Object.entries(incoming)) {
+      if (typeof val !== 'object' || val === null) continue;
+      merged[key] = {
+        label: val.label || current[key]?.label || key,
+        enabled: val.enabled !== undefined ? !!val.enabled : (current[key]?.enabled ?? true),
+        windowMs: Math.max(1000, parseInt(val.windowMs) || 60000),
+        max: val.max === -1 ? -1 : Math.max(1, parseInt(val.max) || 100),
+      };
+    }
+
+    writeRateLimitSettings(merged);
+
+    if (typeof req.app.reloadRateLimit === 'function') {
+      req.app.reloadRateLimit(merged);
+    }
+
+    res.json({ success: true, message: 'Pengaturan rate-limit disimpan & diterapkan', data: merged });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

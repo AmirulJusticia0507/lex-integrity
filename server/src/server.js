@@ -20,13 +20,45 @@ app.use(cors({
 }));
 
 // Rate limiting (keyed by client IP; safe now that trust proxy is on)
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 60000,
-  max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
-  keyGenerator: (req) => req.ip,
-  message: 'Terlalu banyak permintaan dari IP ini'
+const fs = require('fs');
+const path = require('path');
+
+const RATE_LIMIT_FILE = path.join(__dirname, '..', 'rate-limit.json');
+
+function loadRateLimitSettings() {
+  try {
+    if (fs.existsSync(RATE_LIMIT_FILE)) {
+      return JSON.parse(fs.readFileSync(RATE_LIMIT_FILE, 'utf8'));
+    }
+  } catch (e) { /* ignore */ }
+  return {};
+}
+
+function createLimiter(settings) {
+  if (!settings || settings.enabled === false) return null;
+  return rateLimit({
+    windowMs: settings.windowMs || 60000,
+    max: settings.max === -1 ? 0 : (settings.max || 100),
+    keyGenerator: (req) => req.ip,
+    message: 'Terlalu banyak permintaan dari IP ini',
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+}
+
+let globalLimiter = createLimiter({ windowMs: 60000, max: 100 });
+
+function reloadRateLimit(allSettings) {
+  globalLimiter = createLimiter(allSettings.api);
+  console.log(`⚡ Rate-limit reloaded: api=${allSettings.api?.enabled ? allSettings.api.max + '/' + allSettings.api.windowMs + 'ms' : 'off'}`);
+}
+
+app.reloadRateLimit = reloadRateLimit;
+
+app.use('/api/', (req, res, next) => {
+  if (!globalLimiter) return next();
+  globalLimiter(req, res, next);
 });
-app.use('/api/', limiter);
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));

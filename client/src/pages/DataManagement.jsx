@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, FileText, Download, Upload, Trash2, Database, RefreshCw, UserPlus, CheckCircle2, AlertCircle, UserSquare, Shield, Pencil } from 'lucide-react';
+import { Save, FileText, Download, Upload, Trash2, Database, RefreshCw, UserPlus, CheckCircle2, AlertCircle, UserSquare, Shield, Pencil, Zap, Clock } from 'lucide-react';
 
 const DataManagement = () => {
   const [activeTab, setActiveTab] = useState('backup');
@@ -18,6 +18,11 @@ const DataManagement = () => {
   const [userResult, setUserResult] = useState(null);
 
   const [roleResults, setRoleResults] = useState({});
+
+  const [rlSettings, setRlSettings] = useState({});
+  const [rlLoading, setRlLoading] = useState(false);
+  const [rlSaving, setRlSaving] = useState(false);
+  const [rlResult, setRlResult] = useState(null);
 
   const fetchUsers = async () => {
     setIsUsersLoading(true);
@@ -51,7 +56,52 @@ const DataManagement = () => {
   useEffect(() => {
     if (activeTab === 'users') fetchUsers();
     if (activeTab === 'roles') fetchRoles();
+    if (activeTab === 'ratelimit') fetchRlSettings();
   }, [activeTab]);
+
+  const fetchRlSettings = async () => {
+    setRlLoading(true);
+    try {
+      const response = await fetch('/api/settings/rate-limit');
+      const data = await response.json();
+      if (data.success) setRlSettings(data.data);
+    } catch (error) {
+      console.error('Gagal memuat pengaturan rate-limit:', error);
+    } finally {
+      setRlLoading(false);
+    }
+  };
+
+  const handleRlChange = (key, field, value) => {
+    setRlSettings(prev => ({
+      ...prev,
+      [key]: { ...prev[key], [field]: value }
+    }));
+  };
+
+  const handleSaveRlSettings = async () => {
+    setRlSaving(true);
+    setRlResult(null);
+    try {
+      const response = await fetch('/api/settings/rate-limit', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rlSettings),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setRlResult({ success: true, message: data.message || 'Pengaturan disimpan & diterapkan' });
+        setRlSettings(data.data);
+      } else {
+        setRlResult({ success: false, message: data.error || 'Gagal menyimpan' });
+      }
+    } catch (error) {
+      console.error('Gagal menyimpan rate-limit:', error);
+      setRlResult({ success: false, message: 'Tidak dapat terhubung ke server' });
+    } finally {
+      setRlSaving(false);
+    }
+  };
 
   const resetUserForm = () => {
     setUserForm({ id: null, username: '', email: '', password: '', role: 'user' });
@@ -178,7 +228,8 @@ const DataManagement = () => {
     { id: 'import', label: 'Import Data', icon: Upload },
     { id: 'cleanup', label: 'Cleanup', icon: Trash2 },
     { id: 'users', label: 'User Management', icon: UserSquare },
-    { id: 'roles', label: 'Role Permissions', icon: Shield }
+    { id: 'roles', label: 'Role Permissions', icon: Shield },
+    { id: 'ratelimit', label: 'Rate Limiting', icon: Zap }
   ];
   
   return (
@@ -560,6 +611,121 @@ const DataManagement = () => {
                           {roleResults[role.name].message}
                         </div>
                       )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {activeTab === 'ratelimit' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold dark:text-gray-100">Pengaturan Rate Limiting</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Atur batas permintaan per IP. Aturan disimpan & diterapkan secara real-time tanpa restart.
+                  </p>
+                </div>
+                <button
+                  onClick={handleSaveRlSettings}
+                  disabled={rlSaving}
+                  className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                >
+                  <Save className="h-4 w-4" />
+                  {rlSaving ? 'Menyimpan...' : 'Simpan & Terapkan'}
+                </button>
+              </div>
+
+              {rlResult && (
+                <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${rlResult.success
+                    ? 'bg-green-50 text-green-700 dark:bg-gray-700 dark:text-green-400'
+                    : 'bg-red-50 text-red-700 dark:bg-gray-700 dark:text-red-400'}`}>
+                  {rlResult.success
+                    ? <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    : <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />}
+                  {rlResult.message}
+                </div>
+              )}
+
+              {rlLoading ? (
+                <div className="flex items-center justify-center py-10 text-gray-400">
+                  <RefreshCw className="h-5 w-5 animate-spin mr-2" />
+                  Memuat pengaturan...
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(rlSettings).map(([key, cfg]) => (
+                    <div
+                      key={key}
+                      className={`border rounded-lg p-5 transition-colors dark:border-gray-700 ${
+                        cfg.enabled ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900 opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <Zap className={`h-5 w-5 ${cfg.enabled ? 'text-blue-500' : 'text-gray-400'}`} />
+                          <span className="font-semibold text-gray-800 dark:text-gray-100">{cfg.label || key}</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500 font-mono">/{key}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRlChange(key, 'enabled', !cfg.enabled)}
+                          className={`relative w-11 h-6 rounded-full transition-colors ${
+                            cfg.enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                          }`}
+                          aria-label={`Toggle ${cfg.label || key}`}
+                        >
+                          <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                            cfg.enabled ? 'translate-x-5' : ''
+                          }`} />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
+                            <Clock className="inline h-3 w-3 mr-1" />
+                            Jendela Waktu (detik)
+                          </label>
+                          <input
+                            type="number"
+                            value={Math.round((cfg.windowMs || 60000) / 1000)}
+                            onChange={(e) => handleRlChange(key, 'windowMs', (parseInt(e.target.value) || 1) * 1000)}
+                            min={1}
+                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
+                            <Zap className="inline h-3 w-3 mr-1" />
+                            Maks Request per Jendela
+                          </label>
+                          <input
+                            type="number"
+                            value={cfg.max === -1 ? '' : cfg.max}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              handleRlChange(key, 'max', v === '' ? -1 : parseInt(v) || 1);
+                            }}
+                            placeholder="∞ (unlimited)"
+                            min={-1}
+                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                          />
+                          {cfg.max === -1 && (
+                            <p className="text-xs text-blue-500 mt-1">Tanpa batas (unlimited)</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400">
+                            Rate
+                          </label>
+                          <div className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+                            {cfg.max === -1
+                              ? 'Tanpa batas'
+                              : `${cfg.max} req / ${Math.round((cfg.windowMs || 60000) / 1000)} detik`}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
