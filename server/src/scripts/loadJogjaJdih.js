@@ -52,7 +52,7 @@ function mapRecord(rec) {
     regime,
     category: rec.kategori_hukam_name || 'Peraturan Daerah',
     content: contentMeta,
-    is_active: String(rec.status_produk_hukam) === '1',
+    is_active: true,
     publish_date: parseDate(rec.tanggal_pengundangan),
     source: SOURCE,
     pdf_url: rec.file_peraturan || null,
