@@ -9,6 +9,9 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust reverse proxy (CRA dev proxy & production LB send X-Forwarded-For)
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(helmet());
 app.use(cors({
@@ -16,10 +19,11 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
+// Rate limiting (keyed by client IP; safe now that trust proxy is on)
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 60000,
   max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
+  keyGenerator: (req) => req.ip,
   message: 'Terlalu banyak permintaan dari IP ini'
 });
 app.use('/api/', limiter);
@@ -126,8 +130,9 @@ app.get('/health', async (req, res) => {
 // API Routes
 app.use('/api', require('./routes/api'));
 
-// 404 handler
-app.use('*', (req, res) => {
+// 404 handler (path-less middleware avoids decodeURIComponent on stray
+// literal %PUBLIC_URL%/... requests that the CRA proxy may forward)
+app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint tidak ditemukan' });
 });
 
