@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Scale, Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, Loader2, ShieldCheck, TrendingUp, FileText, Cpu } from 'lucide-react';
 import CapCaptcha from '../components/auth/CapCaptcha';
+import { useAuth } from '../components/auth/AuthContext';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { setAuth } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
@@ -29,8 +31,7 @@ const LoginPage = () => {
       });
       const data = await response.json();
       if (response.ok && data.success) {
-        localStorage.setItem('lex_auth_token', data.data.token);
-        localStorage.setItem('lex_auth_user', JSON.stringify(data.data.user));
+        setAuth(data.data.token, data.data.user);
         navigate('/');
       } else {
         setError(data.error || 'Login gagal');
