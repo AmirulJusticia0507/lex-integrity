@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { RuleProvider } from './store/rules';
@@ -26,6 +26,21 @@ const AUTH_PATHS = ['/login', '/forgot-password', '/reset-password'];
 function AnimatedRoutes() {
   const location = useLocation();
   const isAuth = AUTH_PATHS.includes(location.pathname);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lex_sidebar_collapsed') === 'true';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const handler = (e) => setSidebarCollapsed(e.detail?.collapsed ?? false);
+    document.addEventListener('sidebar-collapse', handler);
+    return () => document.removeEventListener('sidebar-collapse', handler);
+  }, []);
+
+  const mainMargin = sidebarCollapsed ? 'ml-16' : 'ml-64';
+  const sidebarWidth = sidebarCollapsed ? 'w-16' : 'w-64';
 
   if (isAuth) {
     return (
@@ -42,7 +57,7 @@ function AnimatedRoutes() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
-      <main className="ml-64 p-8">
+      <main className={`${mainMargin} p-8 transition-all duration-300`}>
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
             <Route
