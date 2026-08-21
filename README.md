@@ -38,6 +38,55 @@ Files di `server/exports/` **gitignored** (terlalu besar ~35 MB total). Copy fol
 
 ---
 
+## 🌐 Data Sources: KEMLU JDIH & UN ILC Documentation
+
+### 1. KEMLU JDIH (jdih.kemlu.go.id) — 100 Dokumen Hukum
+API JSON publik, tidak butuh scraping.
+
+```bash
+cd server
+
+# Import langsung dari API ke PostgreSQL
+node src/scripts/importKemluJdih.js
+```
+
+Output: 100 dokumen (Peraturan Menteri Luar Negeri) → tabel `rules` dengan `source = 'jdih.kemlu.go.id'`
+
+### 2. UN ILC Documentation (legal.un.org/ilc) — 5.421 Dokumen
+Butuh scraping HTML → JSON → Import.
+
+**Step 1: Scrape ke JSON (5.421 records ~2.1 MB)**
+```bash
+cd server
+
+# Install deps (sekali saja)
+npm install axios cheerio
+
+# Jalankan scraper (ambil ~10 menit, delay 1.5s/request)
+node src/scripts/scrapeUnIlc.js
+```
+Output: `scripts/scraper/un_ilc_docs.json`
+
+**Step 2: Import JSON ke PostgreSQL**
+```bash
+node src/scripts/importUnIlc.js
+```
+Output: 5.277 dokumen (General: 823, Limited: 1.027, SummaryRecord: 3.571) → tabel `rules` dengan `source = 'legal.un.org/ilc'`
+
+### 3. Export Data KEMLU/ILC ke JSON + SQL (Backup)
+```bash
+cd server
+
+# Export semua data KEMLU
+node src/scripts/exportSource.js jdih.kemlu.go.id
+
+# Export semua data ILC
+node src/scripts/exportSource.js legal.un.org/ilc
+```
+Files di `server/exports/source_<source>_<timestamp>.{json,sql}` (gitignored).
+
+---
+
 ## 🚀 Panduan Ingestion & Scraping PDF Aturan
 
 ### 1. Prasyarat Scraping (Python 3.10+)
