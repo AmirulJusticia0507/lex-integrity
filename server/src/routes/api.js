@@ -1075,4 +1075,46 @@ router.put('/settings/rate-limit', (req, res) => {
   }
 });
 
+// POST /api/actions/scrape-jogja - Jalankan scraping JDIH Jogja
+router.post('/actions/scrape-jogja', async (req, res) => {
+  try {
+    const { 
+      start = 1, 
+      end = 10, 
+      noClear = false,
+      endpoint = 'https://spl.jogjaprov.go.id/dev-jdih-etalase/public/produk-hukum/'
+    } = req.body;
+    
+    const { exec } = require('child_process');
+    const path = require('path');
+    const batchId = `jogja_${Date.now()}`;
+    
+    const noClearFlag = noClear ? '--no-clear' : '';
+    const cmd = `node "${path.join(process.cwd(), 'src', 'scripts', 'loadJogjaJdih.js')}" --start ${start} --end ${end} ${noClearFlag}`;
+    
+    console.log('[Jogja Scrape] Executing:', cmd);
+    
+    exec(cmd, { 
+      maxBuffer: 1024 * 1024 * 10, 
+      detached: true, 
+      timeout: 600000,
+      env: { ...process.env, JOGJA_ENDPOINT: endpoint }
+    }, (err, stdout, stderr) => {
+      if (err) {
+        console.error('[Jogja Scrape] Error:', err.message);
+      } else {
+        console.log('[Jogja Scrape] Completed:', batchId);
+      }
+    });
+    
+    res.json({
+      success: true,
+      message: `Scraping JDIH Jogja dimulai (halaman ${start}-${end})`,
+      data: { batch_id: batchId, source: 'jogja.prov.go.id', status: 'running', pages: `${start}-${end}` }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;
