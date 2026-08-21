@@ -343,6 +343,170 @@ const DataManagement = () => {
     { id: 'ratelimit', label: 'Rate Limiting', icon: Zap }
   ];
   
+  // Scraping Modal - Early return if modal should show
+  if (showScrapingModal) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Play className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Mulai Scraping Baru</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Konfigurasi endpoint & parameter scraping</p>
+              </div>
+            </div>
+            <button
+              onClick={handleCloseScraping}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <X className="h-5 w-5 text-gray-500" />
+            </button>
+          </div>
+
+          <form onSubmit={handleStartScraping} className="p-6 space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Source</label>
+              <select
+                value={scrapingForm.source}
+                onChange={(e) => handleScrapingChange('source', e.target.value)}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              >
+                <option value="jdih">JDIH Jogja (Node.js)</option>
+                <option value="sleman">Sleman JDIH (Python)</option>
+                <option value="custom">Custom Endpoint</option>
+              </select>
+            </div>
+
+            {scrapingForm.source === 'custom' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Custom Endpoint URL</label>
+                <input
+                  type="url"
+                  value={scrapingForm.endpoint}
+                  onChange={(e) => handleScrapingChange('endpoint', e.target.value)}
+                  placeholder="https://api.example.com/data"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                  required
+                />
+              </div>
+            )}
+
+            {scrapingForm.source !== 'custom' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Endpoint URL (opsional)</label>
+                <input
+                  type="url"
+                  value={scrapingForm.endpoint}
+                  onChange={(e) => handleScrapingChange('endpoint', e.target.value)}
+                  placeholder={scrapingForm.source === 'jdih' 
+                    ? 'https://spl.jogjaprov.go.id/dev-jdih-etalase/public/produk-hukum/' 
+                    : 'https://jdih.slemankab.go.id/...'}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                />
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Jumlah Halaman / Chunk</label>
+                <input
+                  type="number"
+                  value={scrapingForm.pages}
+                  onChange={(e) => handleScrapingChange('pages', parseInt(e.target.value) || 10)}
+                  min={1}
+                  max={1000}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Chunk Size</label>
+                <input
+                  type="number"
+                  value={scrapingForm.chunkSize}
+                  onChange={(e) => handleScrapingChange('chunkSize', parseInt(e.target.value) || 50)}
+                  min={10}
+                  max={500}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={scrapingForm.noPdf}
+                  onChange={(e) => handleScrapingChange('noPdf', e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>Skip PDF Download ({scrapingForm.source === 'sleman' ? 'Sleman' : 'JDIH'})</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={scrapingForm.incremental}
+                  onChange={(e) => handleScrapingChange('incremental', e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>Incremental (--no-clear, append only)</span>
+              </label>
+            </div>
+
+            {scrapingResult && (
+              <div className={`p-4 rounded-lg ${scrapingResult.success ? 'bg-green-50 border border-green-200 dark:bg-green-900/30 dark:border-green-800' : 'bg-red-50 border border-red-200 dark:bg-red-900/30 dark:border-red-800'}`}>
+                <div className="flex items-center gap-2">
+                  {scrapingResult.success ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                  )}
+                  <span className="text-sm {scrapingResult.success ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}">
+                    {scrapingResult.message}
+                  </span>
+                </div>
+                {scrapingResult.output && (
+                  <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs overflow-auto max-h-32 text-gray-700 dark:text-gray-300">
+                    {scrapingResult.output}
+                  </pre>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={handleCloseScraping}
+                className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={isScraping}
+                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                {isScraping ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Menjalankan...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4" />
+                    Mulai Scraping
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-md dark:bg-gray-800">
@@ -405,6 +569,7 @@ const DataManagement = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Mulai Scraping Baru */}
                   <button
+                    type="button"
                     onClick={handleOpenScraping}
                     className="p-5 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-all duration-200 text-left group dark:border-gray-700 dark:hover:bg-blue-900/20 dark:hover:border-blue-800"
                   >
