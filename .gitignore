@@ -27,3 +27,10 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Generated exports & scraped data
+scripts/exports/
+scripts/scraper/*.json
+
+# Temp debug scripts
+server/src/scripts/debugUrls.js
