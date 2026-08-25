@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileText, AlertTriangle, TrendingUp, Users, BarChart2, Search, Grid, Database, Settings, Info, Moon, Sun, UserCircle, ChevronDown, LogIn, KeyRound, ShieldCheck, LogOut, ChevronLeft, ChevronRight, Menu, MessageSquare, Plus, Trash2, Clock, ScrollText } from 'lucide-react';
+import { FileText, AlertTriangle, TrendingUp, Users, BarChart2, Search, Grid, Database, Settings, Info, Moon, Sun, UserCircle, ChevronDown, LogIn, KeyRound, ShieldCheck, LogOut, ChevronLeft, ChevronRight, Menu, MessageSquare, Plus, Trash2, Clock, ScrollText, Brain } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 
 export const Sidebar = () => {
@@ -107,13 +107,14 @@ export const Sidebar = () => {
   };
 
   const menuItems = [
-    { icon: Grid, label: 'Dashboard', path: '/' },
-    { icon: FileText, label: 'Explorer', path: '/rules' },
-    { icon: Search, label: 'Search', path: '/rules/search' },
-    { icon: BarChart2, label: 'Legal Matrix', path: '/matrix' },
-    { icon: TrendingUp, label: 'Analytics', path: '/analytics' },
-    { icon: Database, label: 'Dashboard', path: '/dashboard' },
-    { icon: Settings, label: 'Data Management', path: '/data' }
+    { icon: Grid,     label: 'Dashboard',       path: '/' },
+    { icon: FileText, label: 'Explorer',         path: '/rules' },
+    { icon: Search,   label: 'Search',           path: '/rules/search' },
+    { icon: BarChart2,label: 'Legal Matrix',     path: '/matrix' },
+    { icon: Brain,    label: 'Compliance AI',    path: '/compliance' },
+    { icon: TrendingUp,label:'Analytics',        path: '/analytics' },
+    { icon: Database, label: 'Dashboard',        path: '/dashboard' },
+    { icon: Settings, label: 'Data Management',  path: '/data' }
   ];
   
   const sidebarWidth = collapsed ? 'w-16' : 'w-64';

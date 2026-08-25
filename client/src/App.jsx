@@ -13,6 +13,7 @@ import Analytics from './pages/Analytics';
 import DashboardOverview from './pages/DashboardOverview';
 import DataManagement from './pages/DataManagement';
 import ChatPage from './pages/ChatPage';
+import ComplianceAnalysis from './pages/ComplianceAnalysis';
 import About from './pages/About';
 import LoginPage from './pages/LoginPage';
 import ForgotPassword from './pages/ForgotPassword';
@@ -146,6 +147,16 @@ function AnimatedRoutes() {
                 <PageWrapper>
                   <RequireAuth>
                     <ChatPage />
+                  </RequireAuth>
+                </PageWrapper>
+              }
+            />
+            <Route
+              path="/compliance"
+              element={
+                <PageWrapper>
+                  <RequireAuth>
+                    <ComplianceAnalysis />
                   </RequireAuth>
                 </PageWrapper>
               }

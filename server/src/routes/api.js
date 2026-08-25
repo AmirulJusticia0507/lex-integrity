@@ -332,10 +332,10 @@ router.get('/rules/search/suggestions', async (req, res) => {
   }
 });
 
-// POST /api/chat - Chat with local LLM
+// POST /api/chat - Chat with local lex-integrity-agent LLM
 router.post('/chat', async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, rule_id, history = [] } = req.body;
     
     if (!message) {
       return res.status(400).json({
@@ -348,20 +348,65 @@ router.post('/chat', async (req, res) => {
     const ollama = new Ollama({
       host: process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
     });
-    
+
+    const modelName = process.env.OLLAMA_AGENT_MODEL || process.env.OLLAMA_MODEL || 'lex-integrity-agent:latest';
+
+    // RAG context if rule_id or rule inquiry
+    let extraContext = '';
+    if (rule_id) {
+      try {
+        const rule = await Rule.findByPk(rule_id);
+        if (rule) {
+          extraContext = `\n[KONTEKS REGULASI UTAMA]\nKode: ${rule.rule_code}\nJudul: ${rule.title}\nIsi: ${(rule.content || '').slice(0, 1000)}\n`;
+        }
+      } catch (e) {
+        console.warn('Chat rule lookup error:', e.message);
+      }
+    }
+
+    // Build system message & prompt
+    const systemPrompt = `Anda adalah Lex Integrity Agent, asisten AI hukum lokal yang jujur, adil, berempati, dan berpijak pada kemanusiaan serta keadilan sosial di Indonesia. Berikan jawaban yang tepat, berintegritas, dan mudah dipahami.`;
+
+    const chatMessages = [
+      { role: 'system', content: systemPrompt }
+    ];
+
+    // Include recent history if provided
+    if (Array.isArray(history) && history.length > 0) {
+      history.slice(-6).forEach(h => {
+        if (h.type === 'user' || h.role === 'user') {
+          chatMessages.push({ role: 'user', content: h.content });
+        } else if (h.type === 'assistant' || h.role === 'assistant') {
+          chatMessages.push({ role: 'assistant', content: h.content });
+        }
+      });
+    }
+
+    const userPrompt = extraContext ? `${extraContext}\nPertanyaan User: ${message}` : message;
+    chatMessages.push({ role: 'user', content: userPrompt });
+
     const completion = await ollama.chat({
-      model: process.env.OLLAMA_MODEL || 'deepseek-r1:14b',
-      messages: [{ role: 'user', content: message }],
+      model: modelName,
+      messages: chatMessages,
       options: {
-        temperature: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.1,
-        num_ctx: 2048
+        temperature: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.2,
+        num_ctx: 4096
       }
     });
+
+    let rawContent = completion.message?.content || '';
+
+    // Strip <think>...</think> tags if DeepSeek-R1 reasoning is included
+    let cleanResponse = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    if (!cleanResponse) {
+      cleanResponse = rawContent.trim();
+    }
     
     res.json({
       success: true,
       data: {
-        response: completion.message.content
+        response: cleanResponse,
+        model: modelName
       }
     });
   } catch (error) {
@@ -1117,4 +1162,14 @@ router.post('/actions/scrape-jogja', async (req, res) => {
   }
 });
 
+// ── AI RAG Compliance Analysis ───────────────────────────────────────────────
+const aiController = require('../controllers/aiController');
+
+// POST /api/analyze - Analisis isu hukum via RAG + lex-integrity-agent
+router.post('/analyze', aiController.analyzeRegulatoryCompliance);
+
+// GET /api/analyze/status - Cek ketersediaan agent & pgvector
+router.get('/analyze/status', aiController.getAgentStatus);
+
 module.exports = router;
+

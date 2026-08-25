@@ -192,6 +192,10 @@ const startServer = async () => {
       console.log(`Server berjalan di port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     });
+
+    // Naikkan timeout untuk inferensi LLM 14b (bisa sampai 5 menit)
+    server.timeout          = 600000; // 10 menit max
+    server.keepAliveTimeout = 620000;
     
     // Graceful shutdown
     process.on('SIGTERM', () => {
