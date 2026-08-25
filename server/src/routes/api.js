@@ -351,16 +351,41 @@ router.post('/chat', async (req, res) => {
 
     const modelName = process.env.OLLAMA_AGENT_MODEL || process.env.OLLAMA_MODEL || 'lex-integrity-agent:latest';
 
-    // RAG context if rule_id or rule inquiry
+    // RAG context: Cari pasal dari PostgreSQL jika ada rule_id atau dari pencarian kata kunci
     let extraContext = '';
     if (rule_id) {
       try {
         const rule = await Rule.findByPk(rule_id);
         if (rule) {
-          extraContext = `\n[KONTEKS REGULASI UTAMA]\nKode: ${rule.rule_code}\nJudul: ${rule.title}\nIsi: ${(rule.content || '').slice(0, 1000)}\n`;
+          extraContext = `\n[KONTEKS REGULASI UTAMA DARI DATABASE]\nKode: ${rule.rule_code}\nJudul: ${rule.title}\nIsi: ${(rule.content || '').slice(0, 1000)}\n`;
         }
       } catch (e) {
         console.warn('Chat rule lookup error:', e.message);
+      }
+    } else {
+      // Auto-RAG dari PostgreSQL berdasarkan kata kunci pesan user
+      try {
+        const keywords = message.split(/\s+/).filter(w => w.length > 3).slice(0, 4);
+        if (keywords.length > 0) {
+          const matchedRules = await Rule.findAll({
+            where: {
+              [Op.or]: keywords.map(kw => ({
+                title: { [Op.iLike]: `%${kw}%` }
+              }))
+            },
+            limit: 3,
+            attributes: ['rule_code', 'title', 'content', 'regime']
+          });
+
+          if (matchedRules.length > 0) {
+            extraContext = '\n[KONTEKS REGULASI RELEVAN DARI DATABASE POSTGRESQL]:\n' +
+              matchedRules.map((r, idx) =>
+                `[${idx + 1}] ${r.rule_code} - ${r.title} (${r.regime || 'Umum'}):\n${(r.content || '').slice(0, 500)}`
+              ).join('\n---\n') + '\n';
+          }
+        }
+      } catch (dbErr) {
+        console.warn('Auto RAG PostgreSQL search error:', dbErr.message);
       }
     }
 
