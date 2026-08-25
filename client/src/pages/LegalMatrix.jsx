@@ -52,11 +52,13 @@ const LegalMatrix = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <BarChart 
               data={matrixData.regime_conflicts} 
-              title={`Konflik dalam Era ${selectedRegime === 'all' ? 'Semua' : selectedRegime}`} 
+              title={`Konflik dalam Era ${selectedRegime === 'all' ? 'Semua' : selectedRegime}`}
+              description="Grafik ini menghitung jumlah regulasi pada tiap era yang tercatat memiliki minimal satu celah hukum (loophole), lalu diurutkan dari yang terbanyak. Angka yang tinggi bukan berarti jumlah kontradiksinya sebanyak itu, melainkan menandakan banyak aturan pada era tersebut yang terindikasi tumpang tindih, lemah pengaturannya, atau belum diperbarui."
             />
             <LineChart 
               data={matrixData.time_series} 
-              title="Tren Konflik Sepanjang Waktu" 
+              title="Tren Konflik Sepanjang Waktu"
+              description="Grafik ini menghitung jumlah regulasi yang diterbitkan setiap tahun berdasarkan tanggal terbitnya, sesuai rentang era yang dipilih. Lonjakan pada tahun tertentu muncul karena banyak aturan baru diterbitkan di periode tersebut, sehingga makin padat penerbitannya, makin besar pula potensi konflik antarregulasi."
             />
           </div>
         </div>
