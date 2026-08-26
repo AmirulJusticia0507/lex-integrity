@@ -1,15 +1,18 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Scale, FileText, Brain, Database, Cpu, Cloud, Shield, AlertTriangle, Search, BarChart2, GitBranch, Bot, Github } from 'lucide-react';
+import { Scale, FileText, Brain, Database, Cpu, Cloud, Shield, AlertTriangle, Search, BarChart2, GitBranch, Bot, Github, Key, Zap, Lock, Save, RefreshCw, UserCheck } from 'lucide-react';
 
 const About = () => {
   const stack = [
     { icon: Scale, title: 'React 18 + Tailwind CSS', desc: 'Frontend SPA dengan CRA (react-scripts 5), styling utility-first Tailwind CSS.' },
-    { icon: Database, title: 'Node.js + Express', desc: 'Backend REST API dengan Express, Sequelize ORM, dan Redis untuk antrian.' },
+    { icon: Database, title: 'Node.js + Express', desc: 'Backend REST API dengan Express, Sequelize ORM, dan Redis untuk antrian & cache.' },
     { icon: Shield, title: 'PostgreSQL', desc: 'Database relasional menyimpan peraturan, hasil analisis, dan metadata scraping.' },
     { icon: Brain, title: 'Ollama (Local LLM)', desc: 'Model bahasa lokal (default deepseek-r1:14b) untuk chat dan analisis kontradiksi, 100% offline.' },
-    { icon: FileText, title: 'Scraper Python', desc: 'Skrip scraping JDIH Sleman, JDIH Nasional, DPR & DPRD untuk mengambil dokumen peraturan.' },
-    { icon: GitBranch, title: 'Halaman Utama', desc: 'Dashboard, Explorer, Legal Matrix, Analytics, Data Management, dan Chat AI.' }
+    { icon: FileText, title: 'Scraper Python/Node', desc: 'Skrip scraping JDIH Sleman, JDIH Nasional, DPR & DPRD untuk mengambil dokumen peraturan.' },
+    { icon: Key, title: 'JWT + Role-Based Auth', desc: 'Proteksi endpoint sensitif, guard admin, sinkronisasi SSO Google ke akun lokal.' },
+    { icon: Zap, title: 'Node-Cron Scheduler', desc: 'Penjadwalan otomatis scraping harian/mingguan/bulanan & backup database terjadwal.' },
+    { icon: Save, title: 'Backup & Restore Otomatis', desc: 'Backup JSON terjadwal (harian/mingguan/bulanan) dengan retensi 90 hari.' },
+    { icon: GitBranch, title: 'Halaman Utama', desc: 'Dashboard, Explorer, Legal Matrix, Analytics, Data Management, Chat AI, Compliance.' }
   ];
 
   const features = [
@@ -18,7 +21,13 @@ const About = () => {
     { icon: Brain, title: 'Analisis Kontradiksi', desc: 'AI membandingkan peraturan terkait untuk menemukan inkonsistensi.' },
     { icon: BarChart2, title: 'Legal Matrix', desc: 'Matriks konflik antar peraturan per era dan kategori.' },
     { icon: Bot, title: 'Chat AI', desc: 'Tanya AI tentang peraturan tertentu, percakapan tersimpan per hari.' },
-    { icon: Cloud, title: 'Scraping Terjadwal', desc: 'Otomatis memperbarui data dari sumber JDIH secara berkala.' }
+    { icon: Cloud, title: 'Scraping Terjadwal', desc: 'Node-cron otomatis (harian/mingguan/bulanan) untuk JDIH Jogja & Sleman.' },
+    { icon: Lock, title: 'Login Google SSO', desc: 'OAuth2/OIDC via Keycloak (sso.jogjaprov.go.id) + sinkronisasi akun lokal.' },
+    { icon: Save, title: 'Backup & Restore', desc: 'Backup JSON terjadwal (harian/mingguan/bulanan) + manual via UI, retensi 90 hari.' },
+    { icon: Key, title: 'Keamanan JWT', desc: 'Proteksi endpoint sensitif (23 route), guard admin, interceptor token global.' },
+    { icon: RefreshCw, title: 'Loading Spinner Bermerek', desc: 'LoadingScreen terpusat saat login→dashboard & refresh halaman terproteksi.' },
+    { icon: UserCheck, title: 'Kartu Peraturan Modern', desc: 'UI card hover-lift, aksen gradasi kategori, badge soft, tombol aksi jelas.' },
+    { icon: Zap, title: 'Grafik Lebar Penuh', desc: 'Grafik era full-width, pie chart dengan legenda rapi horizontal wrap.' }
   ];
 
   return (
