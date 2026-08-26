@@ -21,10 +21,8 @@ const Dashboard = () => {
         <StatCard title="Critical Loopholes" value={stats.critical_loopholes} icon={AlertTriangle} />
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <LineChart data={stats.regime_timeline} title="Peraturan per Era" />
-        <PieChart data={stats.category_distribution} title="Distribusi Kategori" />
-      </div>
+      <LineChart data={stats.regime_timeline} title="Peraturan per Era" />
+      <PieChart data={stats.category_distribution} title="Distribusi Kategori" />
       
       <div className="bg-white rounded-lg p-6 dark:bg-gray-800">
         <h3 className="text-lg font-semibold mb-4 dark:text-gray-100">Peraturan Terbaru</h3>
