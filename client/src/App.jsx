@@ -9,6 +9,7 @@ import RuleExplorer from './pages/RuleExplorer';
 import LegalMatrix from './pages/LegalMatrix';
 import RuleSearch from './pages/RuleSearch';
 import RuleDetail from './pages/RuleDetail';
+import RuleHierarchy from './pages/RuleHierarchy';
 import Analytics from './pages/Analytics';
 import DashboardOverview from './pages/DashboardOverview';
 import DataManagement from './pages/DataManagement';
@@ -90,6 +91,16 @@ function AnimatedRoutes() {
                 <PageWrapper>
                   <RequireAuth>
                     <RuleDetail />
+                  </RequireAuth>
+                </PageWrapper>
+              }
+            />
+            <Route
+              path="/rules/:rule_code/hierarchy"
+              element={
+                <PageWrapper>
+                  <RequireAuth>
+                    <RuleHierarchy />
                   </RequireAuth>
                 </PageWrapper>
               }

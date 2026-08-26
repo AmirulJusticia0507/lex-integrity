@@ -305,6 +305,29 @@ router.get('/rules/analytics/overview', async (req, res) => {
   }
 });
 
+// GET /api/rules/:rule_code/hierarchy - Perbandingan hierarki turunan peraturan
+// antar jenjang JDIH (internasional → nasional → provinsi → kabupaten/kota)
+router.get('/rules/:rule_code/hierarchy', async (req, res) => {
+  try {
+    const { rule_code } = req.params;
+    const rule = await Rule.findOne({ where: { rule_code }, raw: true });
+    if (!rule) {
+      return res.status(404).json({ success: false, error: 'Peraturan tidak ditemukan' });
+    }
+
+    const allRules = await Rule.findAll({
+      attributes: ['id', 'title', 'rule_code', 'regime', 'category', 'loopholes',
+        'publish_date', 'source', 'derived_rules', 'processed_at'],
+      raw: true
+    });
+
+    const { buildHierarchy } = require('../utils/hierarchy');
+    res.json({ success: true, data: buildHierarchy(rule, allRules) });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // GET /api/rules/search/suggestions - Get search suggestions
 router.get('/rules/search/suggestions', async (req, res) => {
   try {

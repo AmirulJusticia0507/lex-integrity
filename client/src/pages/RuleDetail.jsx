@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { FileText, AlertTriangle, ArrowLeft, RefreshCw, Search, Scale } from 'lucide-react';
+import { FileText, AlertTriangle, ArrowLeft, RefreshCw, Search, Scale, GitBranch } from 'lucide-react';
 import { useRuleStore } from '../store/rules';
 
 const RuleDetail = () => {
@@ -166,6 +166,14 @@ const RuleDetail = () => {
           >
             <Search className="h-4 w-4" />
             Muat Kontradiksi
+          </button>
+          <button
+            onClick={() => navigate(`/rules/${rule.rule_code}/hierarchy`)}
+            className="flex items-center gap-2 px-4 py-2 border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 transition-colors dark:border-purple-800 dark:text-purple-300 dark:hover:bg-purple-900/20"
+            title="Bandingkan hierarki & turunan peraturan antar jenjang JDIH"
+          >
+            <GitBranch className="h-4 w-4" />
+            Perbandingan Hierarki
           </button>
         </div>
 
