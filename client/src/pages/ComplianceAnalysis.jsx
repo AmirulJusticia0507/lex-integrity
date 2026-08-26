@@ -286,6 +286,8 @@ export default function ComplianceAnalysis() {
       .catch(() => {});
   }, []);
 
+  const agentModel = agentStatus?.agent_model || 'lex-integrity-agent';
+
   const [elapsed, setElapsed] = useState(0);
 
   const handleAnalyze = useCallback(async () => {
@@ -355,7 +357,7 @@ export default function ComplianceAnalysis() {
             </div>
             <div>
               <h1 className="text-2xl font-extrabold tracking-tight">Analisis Kepatuhan Regulasi</h1>
-              <p className="text-slate-400 text-sm">RAG Pipeline · lex-integrity-agent (DeepSeek-R1 14b) · Local AI</p>
+              <p className="text-slate-400 text-sm">RAG Pipeline · {agentModel} · Local AI</p>
             </div>
             <div className="ml-auto">
               <AgentStatusBar status={agentStatus} />
@@ -403,7 +405,7 @@ export default function ComplianceAnalysis() {
             </button>
           </div>
           <p className="text-xs text-slate-500">
-            Pipeline: Query → {agentStatus?.pgvector_ready ? 'Embedding → pgvector search' : 'Full-text search'} → RAG Context → lex-integrity-agent → JSON
+            Pipeline: Query → {agentStatus?.pgvector_ready ? 'Embedding → pgvector search' : 'Full-text search'} → RAG Context → {agentModel} → JSON
           </p>
         </div>
 
@@ -426,8 +428,8 @@ export default function ComplianceAnalysis() {
               </div>
             </div>
             <div>
-              <p className="text-white font-semibold">lex-integrity-agent sedang menganalisis…</p>
-              <p className="text-slate-400 text-sm mt-1">DeepSeek-R1 14b membutuhkan waktu 1–3 menit untuk inferensi lokal</p>
+              <p className="text-white font-semibold">{agentModel} sedang menganalisis…</p>
+              <p className="text-slate-400 text-sm mt-1">Inferensi LLM lokal membutuhkan waktu 1–3 menit</p>
             </div>
             <div className="flex items-center justify-center gap-6 text-xs text-slate-500">
               <span className="flex items-center gap-1.5 text-emerald-400"><CheckCircle className="h-3.5 w-3.5" /> Retrieval selesai</span>
