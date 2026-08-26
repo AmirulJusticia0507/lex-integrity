@@ -64,6 +64,7 @@ async function importUnIlc() {
         },
         is_active: true,
         pdf_url: d.pdf_url,
+        source_url: d.source_url || null,
         source: SOURCE,
         processed_at: new Date().toISOString(),
         processed_by: 'import-un-ilc-scraper',

@@ -1325,6 +1325,98 @@ router.get('/actions/schedules', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/rules/:rule_code/source-docs - Ambil halaman source_url & ekstrak
+// daftar tautan dokumen (pdf/doc/xls/ppt) untuk ditampilkan di viewer.
+router.get('/rules/:rule_code/source-docs', authenticateToken, async (req, res) => {
+  try {
+    const { rule_code } = req.params;
+    const rule = await Rule.findOne({ where: { rule_code }, raw: true });
+    if (!rule) {
+      return res.status(404).json({ success: false, error: 'Peraturan tidak ditemukan' });
+    }
+
+    // Resolusi URL sumber: kolom source_url, lalu JSON content sebagai fallback
+    let sourceUrl = rule.source_url;
+    if (!sourceUrl && typeof rule.content === 'string' && rule.content.trim().startsWith('{')) {
+      try { sourceUrl = JSON.parse(rule.content).source_url || null; } catch { /* abaikan */ }
+    }
+    if (!sourceUrl && rule.derived_rules?.source_url) {
+      sourceUrl = rule.derived_rules.source_url;
+    }
+    if (!sourceUrl) {
+      return res.status(404).json({ success: false, error: 'Peraturan ini tidak memiliki URL sumber' });
+    }
+
+    // Guard SSRF: hanya http(s), blokir host privat/loopback
+    let parsed;
+    try { parsed = new URL(sourceUrl); } catch {
+      return res.status(400).json({ success: false, error: 'URL sumber tidak valid' });
+    }
+    if (!/^https?:$/.test(parsed.protocol)) {
+      return res.status(400).json({ success: false, error: 'Hanya protokol http/https yang didukung' });
+    }
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === 'localhost' || host.endsWith('.local') ||
+      /^(127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(host) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(host) || host === '::1'
+    ) {
+      return res.status(400).json({ success: false, error: 'URL sumber tidak diizinkan' });
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    const pageRes = await fetch(parsed.href, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'LexIntegrityBot/1.0 (+document viewer)' }
+    });
+    clearTimeout(timeoutId);
+    if (!pageRes.ok) {
+      return res.status(502).json({ success: false, error: `Halaman sumber tidak dapat diakses (HTTP ${pageRes.status})` });
+    }
+    const html = (await pageRes.text()).slice(0, 3 * 1024 * 1024); // batas 3 MB
+
+    // Ekstrak anchor <a href="...">teks</a>
+    const DOC_RE = /\.(pdf|docx|doc|xlsx|xls|pptx|ppt|odt|ods|odp|rtf|txt)(?=$|[?#&])/i;
+    const DOC_QUERY_RE = /[?&](?:path|file|url|document)=[^"&]*?\.(pdf|docx|doc|xlsx|xls|pptx|ppt|odt|ods|odp|rtf|txt)(?=&|$)/i;
+    const extractDocType = (href) => {
+      const direct = href.match(DOC_RE);
+      if (direct) return direct[1].toLowerCase();
+      const viaQuery = href.match(DOC_QUERY_RE);
+      return viaQuery ? viaQuery[1].toLowerCase() : null;
+    };
+
+    const anchors = [...html.matchAll(/<a\s[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)];
+    const seen = new Set();
+    const documents = [];
+    for (const [, rawHref, inner] of anchors) {
+      let href;
+      try { href = new URL(rawHref, parsed.href).toString(); } catch { continue; }
+      const fileType = extractDocType(href);
+      if (!fileType || seen.has(href)) continue;
+      seen.add(href);
+      const text = inner.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      documents.push({ url: href, text: text || decodeURIComponent(href.split('/').pop()), fileType });
+    }
+
+    const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    const pageTitle = titleMatch ? titleMatch[1].replace(/\s+/g, ' ').trim() : '';
+
+    res.json({
+      success: true,
+      data: {
+        url: parsed.href,
+        page_title: pageTitle,
+        documents,
+        total: documents.length
+      }
+    });
+  } catch (error) {
+    const msg = error.name === 'AbortError' ? 'Waktu ambil halaman sumber habis' : error.message;
+    res.status(500).json({ success: false, error: msg });
+  }
+});
+
 // ── AI RAG Compliance Analysis ───────────────────────────────────────────────
 const aiController = require('../controllers/aiController');
 

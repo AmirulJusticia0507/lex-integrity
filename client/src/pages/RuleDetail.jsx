@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { FileText, AlertTriangle, ArrowLeft, RefreshCw, Search, Scale, GitBranch } from 'lucide-react';
+import { FileText, AlertTriangle, ArrowLeft, RefreshCw, Search, Scale, GitBranch, ExternalLink } from 'lucide-react';
 import { useRuleStore } from '../store/rules';
 
 const RuleDetail = () => {
@@ -60,6 +60,17 @@ const RuleDetail = () => {
       setError(e.message || 'Gagal memuat kontradiksi');
     }
   };
+
+  const resolveSourceUrl = () => {
+    if (!rule) return null;
+    if (rule.source_url) return rule.source_url;
+    try {
+      const c = typeof rule.content === 'string' && rule.content.trim().startsWith('{') ? JSON.parse(rule.content) : null;
+      if (c?.source_url) return c.source_url;
+    } catch { /* bukan JSON */ }
+    return null;
+  };
+  const sourceUrl = resolveSourceUrl();
 
   if (loading) {
     return <div className="flex justify-center py-20 text-gray-500">Memuat peraturan...</div>;
@@ -175,6 +186,16 @@ const RuleDetail = () => {
             <GitBranch className="h-4 w-4" />
             Perbandingan Hierarki
           </button>
+          {sourceUrl && (
+            <button
+              onClick={() => navigate(`/rules/${rule.rule_code}/source`)}
+              className="flex items-center gap-2 px-4 py-2 border border-teal-300 text-teal-700 rounded-lg hover:bg-teal-50 transition-colors dark:border-teal-800 dark:text-teal-300 dark:hover:bg-teal-900/20"
+              title="Lihat halaman sumber & dokumen terkait"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Lihat Sumber
+            </button>
+          )}
         </div>
 
         {error && <p className="text-red-600 text-sm mt-4">{error}</p>}

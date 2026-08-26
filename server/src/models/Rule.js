@@ -46,6 +46,10 @@ const Rule = sequelize.define('Rule', {
     type: DataTypes.TEXT,
     allowNull: true
   },
+  source_url: {
+    type: DataTypes.STRING(1000),
+    allowNull: true
+  },
   download_count: {
     type: DataTypes.INTEGER,
     defaultValue: 0
