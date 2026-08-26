@@ -21,6 +21,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import { Sidebar, PageWrapper } from './components/layout';
 import { AuthProvider, RequireAuth } from './components/auth/AuthContext';
+import './utils/http';
 import './index.css';
 
 const STANDALONE_PATHS = ['/login', '/forgot-password', '/reset-password', '/privacy'];

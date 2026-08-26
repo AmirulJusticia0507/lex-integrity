@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+import { authFetch } from '../utils/http';
 import { Save, FileText, Download, Upload, Trash2, Database, RefreshCw, UserPlus, CheckCircle2, AlertCircle, UserSquare, Shield, Pencil, Zap, Clock } from 'lucide-react';
 
 const DataManagement = () => {
@@ -28,7 +29,7 @@ const DataManagement = () => {
   const fetchUsers = async () => {
     setIsUsersLoading(true);
     try {
-      const response = await fetch('/api/users');
+      const response = await authFetch('/api/users');
       const data = await response.json();
       if (data.success) setUsers(data.data);
     } catch (error) {
@@ -41,7 +42,7 @@ const DataManagement = () => {
   const fetchRoles = async () => {
     setIsRolesLoading(true);
     try {
-      const response = await fetch('/api/roles');
+      const response = await authFetch('/api/roles');
       const data = await response.json();
       if (data.success) {
         setRoles(data.data);
@@ -63,7 +64,7 @@ const DataManagement = () => {
   const fetchRlSettings = async () => {
     setRlLoading(true);
     try {
-      const response = await fetch('/api/settings/rate-limit');
+      const response = await authFetch('/api/settings/rate-limit');
       const data = await response.json();
       if (data.success) setRlSettings(data.data);
     } catch (error) {
@@ -84,7 +85,7 @@ const DataManagement = () => {
     setRlSaving(true);
     setRlResult(null);
     try {
-      const response = await fetch('/api/settings/rate-limit', {
+      const response = await authFetch('/api/settings/rate-limit', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(rlSettings),
@@ -119,7 +120,7 @@ const DataManagement = () => {
       if (!isEdit) body.password = userForm.password;
       else if (userForm.password) body.password = userForm.password;
 
-      const response = await fetch(`/api/users${isEdit ? `/${userForm.id}` : ''}`, {
+      const response = await authFetch(`/api/users${isEdit ? `/${userForm.id}` : ''}`, {
         method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -148,7 +149,7 @@ const DataManagement = () => {
   const handleDeleteUser = async (user) => {
     if (!confirm(`Hapus akun "${user.username}"?`)) return;
     try {
-      const response = await fetch(`/api/users/${user.id}`, { method: 'DELETE' });
+      const response = await authFetch(`/api/users/${user.id}`, { method: 'DELETE' });
       const data = await response.json();
       if (response.ok && data.success) {
         setUserResult({ success: true, message: data.message || 'Akun dihapus' });
@@ -175,7 +176,7 @@ const DataManagement = () => {
   const handleSaveRole = async (role) => {
     setRoleResults(prev => ({ ...prev, [role.name]: null }));
     try {
-      const response = await fetch(`/api/roles/${role.name}`, {
+      const response = await authFetch(`/api/roles/${role.name}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ permissions: role.permissions }),
@@ -195,7 +196,7 @@ const DataManagement = () => {
   const handleCreateBackup = async () => {
     setIsCreatingBackup(true);
     try {
-      const response = await fetch('/api/actions/create-backup', {
+      const response = await authFetch('/api/actions/create-backup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: backupName || 'manual' })

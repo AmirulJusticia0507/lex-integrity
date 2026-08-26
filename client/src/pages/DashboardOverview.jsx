@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, Database, Brain, Cloud, Shield, Cpu, RefreshCw, Play, Zap as ZapIcon, Database as DatabaseIcon, Trash2 as Broom, ExternalLink, ArrowRight } from 'lucide-react';
+import { authFetch } from '../utils/http';
 
 const DashboardOverview = () => {
   const [systemHealth, setSystemHealth] = useState({
@@ -40,7 +41,7 @@ const DashboardOverview = () => {
     try {
       let res;
       if (action === 'export') {
-        res = await fetch('/api/analytics/export?format=csv');
+        res = await authFetch('/api/analytics/export?format=csv');
         if (!res.ok) throw new Error('Gagal mengekspor data');
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
@@ -52,7 +53,7 @@ const DashboardOverview = () => {
         setActionState({ loading: null, message: 'Data berhasil diekspor (CSV)', error: null });
         return;
       }
-      res = await fetch(`/api/actions/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      res = await authFetch(`/api/actions/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Aksi gagal');
       setActionState({ loading: null, message: data.message || `${label} selesai`, error: null });

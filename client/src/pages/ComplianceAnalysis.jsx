@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { authFetch } from '../utils/http';
 import {
   Brain, Search, AlertTriangle, CheckCircle, ShieldAlert, Scale,
   FileText, ChevronRight, Loader2, Circle, ArrowRight, RefreshCw,
@@ -306,7 +307,7 @@ export default function ComplianceAnalysis() {
     const timeoutId  = setTimeout(() => controller.abort(), 300000); // 5 menit
 
     try {
-      const res = await fetch(`${API_BASE}/api/analyze`, {
+      const res = await authFetch(`${API_BASE}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userQuery: q, limit: 5 }),

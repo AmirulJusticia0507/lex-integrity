@@ -11,6 +11,8 @@ const Analytics = require('../models/Analytics');
 
 const RATE_LIMIT_FILE = path.join(__dirname, '..', '..', 'rate-limit.json');
 const scrapeLock = require('../utils/scrapeLock');
+const crypto = require('crypto');
+const { generateToken, authenticateToken, requireRole } = require('../middleware/auth');
 
 const formatLockError = (endpoint, lock) => ({
   success: false,
@@ -119,7 +121,7 @@ router.get('/rules/:rule_code', async (req, res) => {
 });
 
 // POST /api/rules - Create new rule (async processing)
-router.post('/rules', async (req, res) => {
+router.post('/rules', authenticateToken, async (req, res) => {
   try {
     const ruleData = req.body;
     
@@ -169,7 +171,7 @@ router.post('/rules', async (req, res) => {
 });
 
 // PUT /api/rules/:rule_code - Update rule
-router.put('/rules/:rule_code', async (req, res) => {
+router.put('/rules/:rule_code', authenticateToken, async (req, res) => {
   try {
     const { rule_code } = req.params;
     const updates = req.body;
@@ -206,7 +208,7 @@ router.put('/rules/:rule_code', async (req, res) => {
 });
 
 // DELETE /api/rules/:rule_code - Delete rule
-router.delete('/rules/:rule_code', async (req, res) => {
+router.delete('/rules/:rule_code', authenticateToken, async (req, res) => {
   try {
     const { rule_code } = req.params;
     
@@ -340,7 +342,7 @@ router.get('/rules/search/suggestions', async (req, res) => {
 });
 
 // POST /api/chat - Chat with local lex-integrity-agent LLM
-router.post('/chat', async (req, res) => {
+router.post('/chat', authenticateToken, async (req, res) => {
   try {
     const { message, rule_id, history = [] } = req.body;
     
@@ -451,7 +453,7 @@ router.post('/chat', async (req, res) => {
 });
 
 // POST /api/rules/:rule_code/analyze - Analyze rule using Local LLM
-router.post('/rules/:rule_code/analyze', async (req, res) => {
+router.post('/rules/:rule_code/analyze', authenticateToken, async (req, res) => {
   try {
     const { rule_code } = req.params;
     
@@ -635,7 +637,7 @@ router.get('/analytics/matrix', async (req, res) => {
 });
 
 // POST /api/actions/scrape - Mulai scraping baru (jalankan scraper via subprocess)
-router.post('/actions/scrape', async (req, res) => {
+router.post('/actions/scrape', authenticateToken, async (req, res) => {
   try {
     const { sources = ['jdih.slemankab.go.id'], source = 'sleman' } = req.body;
     const { exec } = require('child_process');
@@ -687,7 +689,7 @@ router.post('/actions/scrape', async (req, res) => {
 });
 
 // POST /api/actions/analyze-batch - Analisis batch via worker background process
-router.post('/actions/analyze-batch', async (req, res) => {
+router.post('/actions/analyze-batch', authenticateToken, async (req, res) => {
   try {
     const { limit = 100 } = req.body;
     const { fork } = require('child_process');
@@ -710,7 +712,7 @@ router.post('/actions/analyze-batch', async (req, res) => {
 });
 
 // GET /api/analytics/export - Ekspor data rules
-router.get('/analytics/export', async (req, res) => {
+router.get('/analytics/export', authenticateToken, async (req, res) => {
   try {
     const { format = 'json', regime } = req.query;
     const where = {};
@@ -738,7 +740,7 @@ router.get('/analytics/export', async (req, res) => {
 });
 
 // POST /api/actions/clear-cache - Bersihkan cache Redis
-router.post('/actions/clear-cache', async (req, res) => {
+router.post('/actions/clear-cache', authenticateToken, async (req, res) => {
   try {
     const CacheService = require('../services/CacheService');
     await CacheService.connect();
@@ -795,7 +797,7 @@ router.get('/categories', async (req, res) => {
 });
 
 // GET /api/queue/stats - Get Bull queue statistics
-router.get('/queue/stats', async (req, res) => {
+router.get('/queue/stats', authenticateToken, async (req, res) => {
   try {
     const Bull = require('bull');
     const queue = new Bull('rule processing', {
@@ -833,7 +835,7 @@ router.get('/queue/stats', async (req, res) => {
 });
 
 // GET /api/users - List all user accounts (without passwords)
-router.get('/users', async (req, res) => {
+router.get('/users', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const users = await User.findAll({
       attributes: ['id', 'username', 'email', 'role', 'created_at'],
@@ -848,7 +850,7 @@ router.get('/users', async (req, res) => {
 });
 
 // POST /api/users - Create a new user account
-router.post('/users', async (req, res) => {
+router.post('/users', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const { username, email, password, role } = req.body;
 
@@ -904,7 +906,7 @@ router.post('/users', async (req, res) => {
 });
 
 // PUT /api/users/:id - Update a user account
-router.put('/users/:id', async (req, res) => {
+router.put('/users/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
     const { username, email, password, role } = req.body;
@@ -952,7 +954,7 @@ router.put('/users/:id', async (req, res) => {
 });
 
 // DELETE /api/users/:id - Delete a user account
-router.delete('/users/:id', async (req, res) => {
+router.delete('/users/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
     const deletedCount = await User.destroy({ where: { id } });
@@ -966,7 +968,7 @@ router.delete('/users/:id', async (req, res) => {
 });
 
 // GET /api/roles - List roles with permissions (seed defaults if empty)
-router.get('/roles', async (req, res) => {
+router.get('/roles', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const count = await Role.count();
     if (count === 0) {
@@ -990,7 +992,7 @@ router.get('/roles', async (req, res) => {
 });
 
 // PUT /api/roles/:name - Update role permissions
-router.put('/roles/:name', async (req, res) => {
+router.put('/roles/:name', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const { name } = req.params;
     const { permissions } = req.body;
@@ -1065,6 +1067,53 @@ router.post('/auth/login', async (req, res) => {
   }
 });
 
+// POST /api/auth/sso - Sinkronisasi user SSO (Google via Keycloak) ke database lokal,
+// lalu terbitkan JWT lokal agar token konsisten dengan middleware authenticateToken.
+// Keamanan: role TIDAK diambil dari payload klien — user baru selalu 'user'.
+router.post('/auth/sso', async (req, res) => {
+  try {
+    const { sub, email, preferred_username, name } = req.body || {};
+    if (!sub || !email || !String(email).includes('@')) {
+      return res.status(400).json({ success: false, error: 'Data SSO tidak valid (sub & email wajib)' });
+    }
+
+    let user = await User.findOne({ where: { email } });
+    let created = false;
+    if (!user) {
+      const base = String(preferred_username || name || email.split('@')[0])
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]/g, '')
+        .slice(0, 90) || 'user';
+      let username = base;
+      let i = 1;
+      while (await User.findOne({ where: { username } })) {
+        username = `${base.slice(0, 85)}_${i++}`;
+      }
+      user = await User.create({
+        username,
+        email,
+        // Password acak yang tidak dapat ditebak — akun SSO tidak bisa dibobol lewat login biasa
+        password: crypto.randomBytes(32).toString('hex'),
+        role: 'user'
+      });
+      created = true;
+    }
+
+    const token = generateToken({ id: user.id, username: user.username, role: user.role });
+    res.json({
+      success: true,
+      message: created ? 'Akun SSO berhasil dibuat dan masuk' : 'Login berhasil',
+      data: {
+        token,
+        created,
+        user: { id: user.id, username: user.username, email: user.email, role: user.role }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // POST /api/auth/forgot-password - Request password reset (simulated)
 router.post('/auth/forgot-password', async (req, res) => {
   try {
@@ -1129,7 +1178,7 @@ function writeRateLimitSettings(data) {
   fs.writeFileSync(RATE_LIMIT_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
 
-router.get('/settings/rate-limit', (req, res) => {
+router.get('/settings/rate-limit', authenticateToken, requireRole('admin'), (req, res) => {
   try {
     const settings = readRateLimitSettings();
     res.json({ success: true, data: settings });
@@ -1138,7 +1187,7 @@ router.get('/settings/rate-limit', (req, res) => {
   }
 });
 
-router.put('/settings/rate-limit', (req, res) => {
+router.put('/settings/rate-limit', authenticateToken, requireRole('admin'), (req, res) => {
   try {
     const incoming = req.body;
     if (!incoming || typeof incoming !== 'object') {
@@ -1171,7 +1220,7 @@ router.put('/settings/rate-limit', (req, res) => {
 });
 
 // POST /api/actions/scrape-jogja - Jalankan scraping JDIH Jogja
-router.post('/actions/scrape-jogja', async (req, res) => {
+router.post('/actions/scrape-jogja', authenticateToken, async (req, res) => {
   try {
     const { 
       start = 1, 
@@ -1220,7 +1269,7 @@ router.post('/actions/scrape-jogja', async (req, res) => {
 });
 
 // POST /api/actions/create-backup - Buat backup data inti (rules, users, roles)
-router.post('/actions/create-backup', async (req, res) => {
+router.post('/actions/create-backup', authenticateToken, async (req, res) => {
   try {
     const BackupService = require('../services/BackupService');
     const result = await BackupService.createBackup(req.body?.name || 'manual');
@@ -1235,7 +1284,7 @@ router.post('/actions/create-backup', async (req, res) => {
 });
 
 // GET /api/actions/backups - Daftar file backup yang tersedia
-router.get('/actions/backups', async (req, res) => {
+router.get('/actions/backups', authenticateToken, async (req, res) => {
   try {
     const BackupService = require('../services/BackupService');
     res.json({ success: true, data: BackupService.listBackups() });
@@ -1245,7 +1294,7 @@ router.get('/actions/backups', async (req, res) => {
 });
 
 // GET /api/actions/schedules - Status scheduler scraping & backup
-router.get('/actions/schedules', async (req, res) => {
+router.get('/actions/schedules', authenticateToken, async (req, res) => {
   try {
     res.json({ success: true, data: require('../services/ScheduleService').getStatus() });
   } catch (error) {
@@ -1257,7 +1306,7 @@ router.get('/actions/schedules', async (req, res) => {
 const aiController = require('../controllers/aiController');
 
 // POST /api/analyze - Analisis isu hukum via RAG + lex-integrity-agent
-router.post('/analyze', aiController.analyzeRegulatoryCompliance);
+router.post('/analyze', authenticateToken, aiController.analyzeRegulatoryCompliance);
 
 // GET /api/analyze/status - Cek ketersediaan agent & pgvector
 router.get('/analyze/status', aiController.getAgentStatus);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { authFetch } from '../utils/http';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { FileText, Scale, UserCircle, Bot, Send, Trash2, MessageSquare, Plus, Cpu, Sparkles, AlertCircle } from 'lucide-react';
 import { apiConfig } from '../config';
@@ -122,7 +123,7 @@ const ChatPage = () => {
     try {
       const apiEndpoint = `${apiConfig.baseURL || ''}/api/chat`;
 
-      const response = await fetch(apiEndpoint, {
+      const response = await authFetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

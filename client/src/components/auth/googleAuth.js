@@ -54,15 +54,40 @@ export async function handleGoogleCallback(code) {
   }
   const userinfo = await userinfoRes.json();
 
-  return {
-    status: 'success',
-    token: tokenData.access_token,
-    user: {
-      id: userinfo.sub,
-      username: userinfo.preferred_username || userinfo.name || 'pengguna_sso',
-      email: userinfo.email || '',
-      role: userinfo.realm_access?.roles?.includes('administrator') ? 'admin' : 'user',
-      name: userinfo.name || userinfo.preferred_username
+  // Tukar identitas SSO dengan sesi lokal (JWT internal) agar token
+  // konsisten dengan middleware authenticateToken di backend.
+  try {
+    const ssoRes = await fetch('/api/auth/sso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sub: userinfo.sub,
+        email: userinfo.email,
+        preferred_username: userinfo.preferred_username,
+        name: userinfo.name
+      })
+    });
+    const ssoData = await ssoRes.json();
+    if (ssoRes.ok && ssoData.success) {
+      return {
+        status: 'success',
+        token: ssoData.data.token,
+        user: ssoData.data.user
+      };
     }
-  };
+    return { status: 'error', message: ssoData.error || 'Login Google gagal: sinkronisasi akun ditolak server.' };
+  } catch {
+    // Backend tidak terjangkau -> fallback ke profil Keycloak apa adanya
+    return {
+      status: 'success',
+      token: tokenData.access_token,
+      user: {
+        id: userinfo.sub,
+        username: userinfo.preferred_username || userinfo.name || 'pengguna_sso',
+        email: userinfo.email || '',
+        role: 'user',
+        name: userinfo.name || userinfo.preferred_username
+      }
+    };
+  }
 }
