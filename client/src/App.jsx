@@ -15,6 +15,7 @@ import DataManagement from './pages/DataManagement';
 import ChatPage from './pages/ChatPage';
 import ComplianceAnalysis from './pages/ComplianceAnalysis';
 import About from './pages/About';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import LoginPage from './pages/LoginPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -22,11 +23,11 @@ import { Sidebar, PageWrapper } from './components/layout';
 import { AuthProvider, RequireAuth } from './components/auth/AuthContext';
 import './index.css';
 
-const AUTH_PATHS = ['/login', '/forgot-password', '/reset-password'];
+const STANDALONE_PATHS = ['/login', '/forgot-password', '/reset-password', '/privacy'];
 
 function AnimatedRoutes() {
   const location = useLocation();
-  const isAuth = AUTH_PATHS.includes(location.pathname);
+  const isStandalone = STANDALONE_PATHS.includes(location.pathname);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('lex_sidebar_collapsed') === 'true';
@@ -43,13 +44,14 @@ function AnimatedRoutes() {
   const mainMargin = sidebarCollapsed ? 'ml-16' : 'ml-64';
   const sidebarWidth = sidebarCollapsed ? 'w-16' : 'w-64';
 
-  if (isAuth) {
+  if (isStandalone) {
     return (
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
         </Routes>
       </AnimatePresence>
     );

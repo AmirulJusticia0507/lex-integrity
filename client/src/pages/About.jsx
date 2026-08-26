@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Scale, FileText, Brain, Database, Cpu, Cloud, Shield, AlertTriangle, Search, BarChart2, GitBranch, Bot, Github } from 'lucide-react';
 
 const About = () => {
@@ -100,6 +101,11 @@ const About = () => {
         </p>
         <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">
           Dibangun dengan AI-LLM terintegrasi — Ollama (Local LLM).
+        </p>
+        <p className="text-xs mt-2">
+          <Link to="/privacy" className="text-blue-600 hover:underline dark:text-blue-400">
+            Kebijakan Privasi &amp; Cookies
+          </Link>
         </p>
       </div>
     </div>
