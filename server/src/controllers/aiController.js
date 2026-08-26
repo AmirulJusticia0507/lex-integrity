@@ -182,11 +182,16 @@ Kembalikan respons HANYA dalam format JSON valid berikut (TANPA teks di luar JSO
 }`;
 
     // ── 4. Panggil lex-integrity-agent via Ollama ────────────────────────────
+    // - think:false : lewati fase <think> DeepSeek-R1 (output JSON saja) -> jauh lebih cepat
+    //   (aktifkan kembali via OLLAMA_THINK=true bila ingin reasoning eksplisit)
+    // - keep_alive  : model tetap dimuat di memori antar request (hemat ±55 dtk cold start)
     const ollamaRes = await ollama.generate({
       model: AGENT_MODEL,
       prompt: promptPayload,
       stream: false,
       format: 'json',
+      think: process.env.OLLAMA_THINK === 'true',
+      keep_alive: `${parseInt(process.env.OLLAMA_KEEP_ALIVE_MIN || 30)}m`,
       options: {
         temperature: 0.15,
         num_ctx: 4096,
