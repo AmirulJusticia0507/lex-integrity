@@ -32,5 +32,9 @@ Thumbs.db
 scripts/exports/
 scripts/scraper/*.json
 
+# Scheduled backups & runtime config
+server/backups/
+server/scrape-schedule.json
+
 # Temp debug scripts
 server/src/scripts/debugUrls.js

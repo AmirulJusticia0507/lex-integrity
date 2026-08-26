@@ -10,6 +10,13 @@ const Role = require('../models/Role');
 const Analytics = require('../models/Analytics');
 
 const RATE_LIMIT_FILE = path.join(__dirname, '..', '..', 'rate-limit.json');
+const scrapeLock = require('../utils/scrapeLock');
+
+const formatLockError = (endpoint, lock) => ({
+  success: false,
+  error: `Scraping untuk "${endpoint}" sedang berjalan${lock.started_at ? ` (sejak ${lock.started_at})` : ''}. Tunggu hingga proses selesai.`,
+  data: { endpoint, started_at: lock.started_at || null, retry_after_seconds: lock.ttl || null }
+});
 
 const router = express.Router();
 
@@ -637,17 +644,35 @@ router.post('/actions/scrape', async (req, res) => {
     const outPath = path.join(__dirname, '..', '..', '..', 'scripts', 'scraper', 'sleman_rules_tmp.json');
 
     if (source === 'sleman') {
+      const SLEMAN_ENDPOINT = 'jdih.slemankab.go.id';
+      // Tolak scraping dobel dari endpoint yang sama (TTL 8 menit > timeout proses 5 menit)
+      const lock = await scrapeLock.acquire(SLEMAN_ENDPOINT, 8 * 60);
+      if (!lock.acquired) {
+        return res.status(409).json(formatLockError(SLEMAN_ENDPOINT, lock));
+      }
+
       const cmd = `python "${path.join(process.cwd(), '..', '..', 'scripts', 'scraper', 'jdih_sleman_scraper.py')}" --no-pdf --output-json "${outPath}"`;
       exec(cmd, { maxBuffer: 1024 * 1024 * 5, detached: true, timeout: 300000 },
         (err, stdout, stderr) => {
+          scrapeLock.release(SLEMAN_ENDPOINT);
           if (err) console.error('Scrape error:', err.message);
         });
       res.json({
         success: true,
         message: 'Scraping Sleman sedang dijalankan di latar belakang',
-        data: { batch_id: batchId, source: 'jdih.slemankab.go.id', status: 'running' }
+        data: { batch_id: batchId, source: SLEMAN_ENDPOINT, status: 'running' }
       });
     } else {
+      // Kunci semua sumber lebih dulu; gagal satu -> rollback yang sudah terkunci
+      const lockedSources = [];
+      for (const src of sources) {
+        const lock = await scrapeLock.acquire(src, 30 * 60);
+        if (!lock.acquired) {
+          for (const acquiredSrc of lockedSources) await scrapeLock.release(acquiredSrc);
+          return res.status(409).json(formatLockError(src, lock));
+        }
+        lockedSources.push(src);
+      }
       const CrawlerService = require('../services/CrawlerService');
       await CrawlerService.queueScheduledScrape(sources, batchId);
       res.json({
@@ -1159,6 +1184,12 @@ router.post('/actions/scrape-jogja', async (req, res) => {
     const path = require('path');
     const batchId = `jogja_${Date.now()}`;
     
+    // Tolak scraping dobel dari endpoint yang sama (TTL 15 menit > timeout proses 10 menit)
+    const lock = await scrapeLock.acquire(endpoint, 15 * 60);
+    if (!lock.acquired) {
+      return res.status(409).json(formatLockError(endpoint, lock));
+    }
+
     const noClearFlag = noClear ? '--no-clear' : '';
     const cmd = `node "${path.join(process.cwd(), 'src', 'scripts', 'loadJogjaJdih.js')}" --start ${start} --end ${end} ${noClearFlag}`;
     
@@ -1170,6 +1201,7 @@ router.post('/actions/scrape-jogja', async (req, res) => {
       timeout: 600000,
       env: { ...process.env, JOGJA_ENDPOINT: endpoint }
     }, (err, stdout, stderr) => {
+      scrapeLock.release(endpoint);
       if (err) {
         console.error('[Jogja Scrape] Error:', err.message);
       } else {
@@ -1182,6 +1214,40 @@ router.post('/actions/scrape-jogja', async (req, res) => {
       message: `Scraping JDIH Jogja dimulai (halaman ${start}-${end})`,
       data: { batch_id: batchId, source: 'jogja.prov.go.id', status: 'running', pages: `${start}-${end}` }
     });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/actions/create-backup - Buat backup data inti (rules, users, roles)
+router.post('/actions/create-backup', async (req, res) => {
+  try {
+    const BackupService = require('../services/BackupService');
+    const result = await BackupService.createBackup(req.body?.name || 'manual');
+    res.json({
+      success: true,
+      message: `Backup "${result.filename}" berhasil dibuat`,
+      data: result
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/actions/backups - Daftar file backup yang tersedia
+router.get('/actions/backups', async (req, res) => {
+  try {
+    const BackupService = require('../services/BackupService');
+    res.json({ success: true, data: BackupService.listBackups() });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/actions/schedules - Status scheduler scraping & backup
+router.get('/actions/schedules', async (req, res) => {
+  try {
+    res.json({ success: true, data: require('../services/ScheduleService').getStatus() });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

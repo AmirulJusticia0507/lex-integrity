@@ -193,6 +193,9 @@ const startServer = async () => {
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     });
 
+    // Scheduler scraping & backup otomatis (konfigurasi: server/scrape-schedule.json)
+    require('./services/ScheduleService').init();
+
     // Naikkan timeout untuk inferensi LLM 14b (bisa sampai 5 menit)
     server.timeout          = 600000; // 10 menit max
     server.keepAliveTimeout = 620000;
@@ -200,6 +203,7 @@ const startServer = async () => {
     // Graceful shutdown
     process.on('SIGTERM', () => {
       console.log('SIGTERM diterima, menghentikan server...');
+      require('./services/ScheduleService').stopAll();
       server.close(() => {
         console.log('Server ditutup');
         redis.quit();

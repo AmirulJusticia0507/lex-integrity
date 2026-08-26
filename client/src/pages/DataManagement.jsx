@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 import { Save, FileText, Download, Upload, Trash2, Database, RefreshCw, UserPlus, CheckCircle2, AlertCircle, UserSquare, Shield, Pencil, Zap, Clock } from 'lucide-react';
 
 const DataManagement = () => {
@@ -194,11 +195,21 @@ const DataManagement = () => {
   const handleCreateBackup = async () => {
     setIsCreatingBackup(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('Backup created:', backupName);
-      setBackupName('');
+      const response = await fetch('/api/actions/create-backup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: backupName || 'manual' })
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        toast.success(data.message);
+        setBackupName('');
+      } else {
+        toast.error(data.error || 'Gagal membuat backup');
+      }
     } catch (error) {
       console.error('Failed to create backup:', error);
+      toast.error('Tidak dapat terhubung ke server');
     } finally {
       setIsCreatingBackup(false);
     }

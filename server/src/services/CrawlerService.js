@@ -58,6 +58,12 @@ class CrawlerService {
       } catch (error) {
         console.error('Scraper batch failed:', error);
         throw error;
+      } finally {
+        // Lepaskan lock endpoint agar scraping berikutnya diizinkan
+        const scrapeLock = require('../utils/scrapeLock');
+        for (const src of scraper_config.sources || []) {
+          await scrapeLock.release(src);
+        }
       }
     });
   }
