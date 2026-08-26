@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { FileText, AlertTriangle, ArrowLeft, RefreshCw, Search, Scale, GitBranch, ExternalLink } from 'lucide-react';
+import { FileText, AlertTriangle, ArrowLeft, RefreshCw, Search, Scale, GitBranch, ExternalLink, Megaphone } from 'lucide-react';
 import { useRuleStore } from '../store/rules';
 
 const RuleDetail = () => {
@@ -186,7 +186,7 @@ const RuleDetail = () => {
             <GitBranch className="h-4 w-4" />
             Perbandingan Hierarki
           </button>
-          {sourceUrl && (
+          {sourceUrl ? (
             <button
               onClick={() => navigate(`/rules/${rule.rule_code}/source`)}
               className="flex items-center gap-2 px-4 py-2 border border-teal-300 text-teal-700 rounded-lg hover:bg-teal-50 transition-colors dark:border-teal-800 dark:text-teal-300 dark:hover:bg-teal-900/20"
@@ -194,6 +194,15 @@ const RuleDetail = () => {
             >
               <ExternalLink className="h-4 w-4" />
               Lihat Sumber
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate(`/rules/${rule.rule_code}/aksi-warga`)}
+              className="flex items-center gap-2 px-4 py-2 border border-orange-300 text-orange-700 rounded-lg hover:bg-orange-50 transition-colors dark:border-orange-800 dark:text-orange-300 dark:hover:bg-orange-900/20"
+              title="Dokumen sumber tidak tersedia — lihat langkah resmi yang bisa Anda lakukan sebagai warga"
+            >
+              <Megaphone className="h-4 w-4" />
+              Panduan Aksi Warga
             </button>
           )}
         </div>

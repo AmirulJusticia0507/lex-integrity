@@ -11,6 +11,7 @@ import RuleSearch from './pages/RuleSearch';
 import RuleDetail from './pages/RuleDetail';
 import RuleHierarchy from './pages/RuleHierarchy';
 import SourceViewer from './pages/SourceViewer';
+import CitizenActionGuide from './pages/CitizenActionGuide';
 import Analytics from './pages/Analytics';
 import DashboardOverview from './pages/DashboardOverview';
 import DataManagement from './pages/DataManagement';
@@ -112,6 +113,16 @@ function AnimatedRoutes() {
                 <PageWrapper>
                   <RequireAuth>
                     <SourceViewer />
+                  </RequireAuth>
+                </PageWrapper>
+              }
+            />
+            <Route
+              path="/rules/:rule_code/aksi-warga"
+              element={
+                <PageWrapper>
+                  <RequireAuth>
+                    <CitizenActionGuide />
                   </RequireAuth>
                 </PageWrapper>
               }
