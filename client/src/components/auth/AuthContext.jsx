@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import LoadingScreen from '../layout/LoadingScreen';
 
 const AuthContext = createContext();
 
@@ -64,7 +65,11 @@ export function RequireAuth({ children }) {
     }
   }, [loading, user, clearAuth, navigate]);
 
-  if (loading || !user) {
+  if (loading) {
+    return <LoadingScreen label="Memeriksa sesi..." />;
+  }
+
+  if (!user) {
     return null;
   }
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LineChart, BarChart, PieChart } from '../components/charts';
 import { RuleCard } from '../components/rules';
+import { LoadingScreen } from '../components/layout';
 import { useRuleStore } from '../store/rules';
 import { TrendingUp, Users, FileText, AlertTriangle, ArrowRight } from 'lucide-react';
 
@@ -10,10 +11,22 @@ const Dashboard = () => {
   const { rules, stats, fetchDashboardData } = useRuleStore();
   const [selectedRegime, setSelectedRegime] = useState('all');
   const [timeRange, setTimeRange] = useState('all');
-  
+  const [initialLoading, setInitialLoading] = useState(true);
+
   useEffect(() => {
-    fetchDashboardData(selectedRegime, timeRange);
-  }, [selectedRegime, timeRange]);
+    let cancelled = false;
+    setInitialLoading(true);
+    Promise.resolve(fetchDashboardData(selectedRegime, timeRange)).finally(() => {
+      if (!cancelled) setInitialLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRegime, timeRange, fetchDashboardData]);
+
+  if (initialLoading && !stats.total_rules) {
+    return <LoadingScreen label="Menyiapkan dashboard..." />;
+  }
   
   return (
     <div className="space-y-6">
