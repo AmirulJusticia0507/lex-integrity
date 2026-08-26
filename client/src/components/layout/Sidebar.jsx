@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileText, AlertTriangle, TrendingUp, Users, BarChart2, Search, Grid, Database, Settings, Info, Moon, Sun, UserCircle, ChevronDown, LogIn, KeyRound, ShieldCheck, LogOut, ChevronLeft, ChevronRight, Menu, MessageSquare, Plus, Trash2, Clock, ScrollText, Brain } from 'lucide-react';
+import { FileText, AlertTriangle, TrendingUp, Users, BarChart2, Search, Grid, Database, Settings, Info, Moon, Sun, UserCircle, ChevronDown, LogIn, KeyRound, ShieldCheck, LogOut, ChevronLeft, ChevronRight, Menu, MessageSquare, Plus, Trash2, Clock, ScrollText, Brain, X } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 
 export const Sidebar = () => {
@@ -15,6 +15,7 @@ export const Sidebar = () => {
     return false;
   });
   const { user, clearAuth } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   // Chat history state
   const [sessions, setSessions] = useState([]);
@@ -39,6 +40,24 @@ export const Sidebar = () => {
     localStorage.setItem('lex_sidebar_collapsed', String(collapsed));
     document.dispatchEvent(new CustomEvent('sidebar-collapse', { detail: { collapsed } }));
   }, [collapsed]);
+
+  // Mobile drawer: buka/tutup via event dari MobileTopBar, tutup saat pindah halaman
+  useEffect(() => {
+    const handler = () => setMobileOpen((o) => !o);
+    window.addEventListener('sidebar-mobile-toggle', handler);
+    return () => window.removeEventListener('sidebar-mobile-toggle', handler);
+  }, []);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
 
   // Load chat sessions
   useEffect(() => {
@@ -121,29 +140,50 @@ export const Sidebar = () => {
   const isChatRoute = location.pathname === '/chat';
 
   return (
-    <aside className={`fixed left-0 top-0 h-full ${sidebarWidth} bg-white shadow-lg z-50 dark:bg-gray-800 transition-all duration-300`}>
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between h-10">
-          {!collapsed && (
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-sm font-bold">LI</span>
+    <>
+      {/* Backdrop mobile */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        className={`fixed left-0 top-0 h-full ${sidebarWidth} bg-white shadow-lg z-50 dark:bg-gray-800 transition-all duration-300 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        } md:translate-x-0`}
+      >
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between h-10">
+            {!collapsed && (
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-sm font-bold">LI</span>
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">Lex-Integrity</h1>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">AI Regulatory Compliance</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">Lex-Integrity</h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400">AI Regulatory Compliance</p>
-              </div>
-            </div>
-          )}
-          <button
-            onClick={toggleCollapseHandler}
-            className={`p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 ${collapsed ? 'ml-auto' : 'ml-2'}`}
-            aria-label={collapsed ? 'Perluas sidebar' : 'Collapse sidebar'}
-          >
-            {collapsed ? <ChevronRight className="h-5 w-5 text-gray-500" /> : <ChevronLeft className="h-5 w-5 text-gray-500" />}
-          </button>
+            )}
+            {/* Tombol collapse hanya untuk desktop; di mobile pakai backdrop/X */}
+            <button
+              onClick={toggleCollapseHandler}
+              className={`hidden md:flex p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 ${collapsed ? 'ml-auto' : 'ml-2'}`}
+              aria-label={collapsed ? 'Perluas sidebar' : 'Collapse sidebar'}
+            >
+              {collapsed ? <ChevronRight className="h-5 w-5 text-gray-500" /> : <ChevronLeft className="h-5 w-5 text-gray-500" />}
+            </button>
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="md:hidden ml-auto p-2 rounded-lg hover:bg-gray-100 transition-colors dark:hover:bg-gray-700"
+              aria-label="Tutup menu"
+            >
+              <X className="h-5 w-5 text-gray-500" />
+            </button>
+          </div>
         </div>
-      </div>
       
       <nav className="mt-4 px-2">
         {menuItems.map((item, index) => (
@@ -359,7 +399,8 @@ export const Sidebar = () => {
           )}
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 };
 

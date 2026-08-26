@@ -22,7 +22,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import LoginPage from './pages/LoginPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import { Sidebar, PageWrapper } from './components/layout';
+import { Sidebar, PageWrapper, MobileTopBar } from './components/layout';
 import { AuthProvider, RequireAuth } from './components/auth/AuthContext';
 import './utils/http';
 import './index.css';
@@ -45,8 +45,8 @@ function AnimatedRoutes() {
     return () => document.removeEventListener('sidebar-collapse', handler);
   }, []);
 
-  const mainMargin = sidebarCollapsed ? 'ml-16' : 'ml-64';
-  const sidebarWidth = sidebarCollapsed ? 'w-16' : 'w-64';
+  // Mobile: tanpa margin (sidebar jadi drawer); desktop: ikut lebar sidebar
+  const mainMargin = sidebarCollapsed ? 'md:ml-16' : 'md:ml-64';
 
   if (isStandalone) {
     return (
@@ -64,7 +64,8 @@ function AnimatedRoutes() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
-      <main className={`${mainMargin} p-8 transition-all duration-300`}>
+      <MobileTopBar />
+      <main className={`${mainMargin} p-4 sm:p-6 lg:p-8 transition-all duration-300`}>
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
             <Route
