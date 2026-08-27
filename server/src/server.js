@@ -188,10 +188,32 @@ const startServer = async () => {
     await sequelize.sync();
     console.log('📊 Database tables synced');
     
-    const server = app.listen(PORT, () => {
-      console.log(`Server berjalan di port ${PORT}`);
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    });
+    let currentPort = parseInt(PORT, 10) || 3000;
+    const maxRetries = 50;
+    let server;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        server = await new Promise((resolve, reject) => {
+          const s = app.listen(currentPort);
+          s.once('listening', () => resolve(s));
+          s.once('error', (err) => {
+            if (err.code === 'EADDRINUSE') reject(err);
+            else reject(err);
+          });
+        });
+        break;
+      } catch (err) {
+        if (err.code === 'EADDRINUSE') {
+          console.log(`Port ${currentPort} dipakai, coba ${currentPort + 1}...`);
+          currentPort++;
+        } else {
+          throw err;
+        }
+      }
+    }
+    if (!server) throw new Error(`Gagal cari port kosong setelah ${maxRetries} percobaan`);
+    console.log(`Server berjalan di port ${currentPort}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 
     // Scheduler scraping & backup otomatis (konfigurasi: server/scrape-schedule.json)
     require('./services/ScheduleService').init();
