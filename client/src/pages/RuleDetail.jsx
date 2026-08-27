@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { FileText, AlertTriangle, ArrowLeft, RefreshCw, Search, Scale, GitBranch, ExternalLink, Megaphone } from 'lucide-react';
+import { FileText, AlertTriangle, ArrowLeft, RefreshCw, Search, Scale, GitBranch, ExternalLink, Megaphone, Download } from 'lucide-react';
 import { useRuleStore } from '../store/rules';
 
 const RuleDetail = () => {
@@ -186,6 +186,18 @@ const RuleDetail = () => {
             <GitBranch className="h-4 w-4" />
             Perbandingan Hierarki
           </button>
+          {rule.pdf_url && (
+            <a
+              href={rule.pdf_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 border border-green-300 text-green-700 rounded-lg hover:bg-green-50 transition-colors dark:border-green-800 dark:text-green-300 dark:hover:bg-green-900/20"
+              title="Unduh file PDF asli peraturan"
+            >
+              <Download className="h-4 w-4" />
+              Unduh PDF
+            </a>
+          )}
           {sourceUrl ? (
             <button
               onClick={() => navigate(`/rules/${rule.rule_code}/source`)}

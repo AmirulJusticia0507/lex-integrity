@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, ExternalLink, FileText, Globe, Loader2, File as FileIcon,
-  Table, Presentation, AlertTriangle, Eye
+  Table, Presentation, AlertTriangle, Eye, Download
 } from 'lucide-react';
 import { authFetch } from '../utils/http';
 import LoadingScreen from '../components/layout/LoadingScreen';
@@ -167,15 +167,29 @@ const SourceViewer = () => {
               Sumber: {(rule.source_url || '').toString()}
             </p>
           </div>
-          <a
-            href={rule.source_url || '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shrink-0 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Buka Asli
-          </a>
+          <div className="flex items-center gap-2 shrink-0">
+            {rule.pdf_url && (
+              <a
+                href={rule.pdf_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-green-300 text-sm font-medium text-green-700 hover:bg-green-50 transition-colors dark:border-green-800 dark:text-green-300 dark:hover:bg-green-900/20"
+                title="Unduh file PDF asli peraturan"
+              >
+                <Download className="h-4 w-4" />
+                Unduh PDF
+              </a>
+            )}
+            <a
+              href={rule.source_url || '#'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shrink-0 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Buka Asli
+            </a>
+          </div>
         </div>
 
         {/* Tab */}
