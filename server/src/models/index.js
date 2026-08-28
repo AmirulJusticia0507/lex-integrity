@@ -1,13 +1,7 @@
-const sequelize = require('../config/database');
-const Rule = require('./Rule');
-const User = require('./User');
-const Analytics = require('./Analytics');
-const Role = require('./Role');
+import sequelize from '../config/database.js';
+import Rule from './Rule.js';
+import User from './User.js';
+import Analytics from './Analytics.js';
+import Role from './Role.js';
 
-module.exports = {
-  sequelize,
-  Rule,
-  User,
-  Analytics,
-  Role
-};
+export { sequelize, Rule, User, Analytics, Role };

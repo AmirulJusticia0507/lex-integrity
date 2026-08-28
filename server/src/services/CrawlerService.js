@@ -1,6 +1,7 @@
-const Rule = require('../models/Rule');
-const redis = require('redis');
-const Bull = require('bull');
+import Rule from '../models/Rule.js';
+import redis from 'redis';
+import Bull from 'bull';
+import scrapeLock from '../utils/scrapeLock.js';
 
 class CrawlerService {
   constructor() {
@@ -24,7 +25,7 @@ class CrawlerService {
       
       try {
         // Perform RAG analysis on the rule
-        const RAGService = require('./RAGService');
+        const RAGService = (await import('./RAGService.js')).default;
         const analysis = await RAGService.analyzeRule(rule_data);
         
         // Update rule in database
@@ -51,7 +52,7 @@ class CrawlerService {
       
       try {
         // Import and run scraper
-        const { runScraper } = require('../utils/scraper');
+        const { runScraper } = await import('../utils/scraper.js');
         const results = await runScraper(scraper_config);
         
         return { success: true, results, batch_id };
@@ -60,7 +61,6 @@ class CrawlerService {
         throw error;
       } finally {
         // Lepaskan lock endpoint agar scraping berikutnya diizinkan
-        const scrapeLock = require('../utils/scrapeLock');
         for (const src of scraper_config.sources || []) {
           await scrapeLock.release(src);
         }
@@ -116,4 +116,4 @@ class CrawlerService {
   }
 }
 
-module.exports = new CrawlerService();
+export default new CrawlerService();

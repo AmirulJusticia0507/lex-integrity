@@ -1,6 +1,6 @@
 // Utilitas embedding — placeholder karena modul lama tidak tersedia.
-// Diganti dengan fungsi sederhana agar require di RAGService tetap bekerja.
-function getEmbedding(text) {
+// Diganti dengan fungsi sederhana agar RAGService tetap bekerja.
+export function getEmbedding(text) {
   if (!text) return [];
   const words = String(text).toLowerCase().split(/\W+/).filter(Boolean);
   const map = {};
@@ -8,4 +8,5 @@ function getEmbedding(text) {
   return Object.entries(map).map(([token, count]) => ({ token, count }));
 }
 
-module.exports = { getEmbedding };
+export default { getEmbedding };
+

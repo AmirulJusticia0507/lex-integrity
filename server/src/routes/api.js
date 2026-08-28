@@ -1,18 +1,28 @@
-const express = require('express');
-const { Op } = require('sequelize');
-const bcrypt = require('bcryptjs');
-const fs = require('fs');
-const path = require('path');
-const { sequelize } = require('../models');
-const Rule = require('../models/Rule');
-const User = require('../models/User');
-const Role = require('../models/Role');
-const Analytics = require('../models/Analytics');
+import express from 'express';
+import { Op } from 'sequelize';
+import bcrypt from 'bcryptjs';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import crypto from 'crypto';
+import { exec, fork } from 'child_process';
+import Bull from 'bull';
+import { Ollama } from 'ollama';
+
+import { sequelize, Rule, User, Role, Analytics } from '../models/index.js';
+import scrapeLock from '../utils/scrapeLock.js';
+import { generateToken, authenticateToken, requireRole } from '../middleware/auth.js';
+import CacheService from '../services/CacheService.js';
+import BackupService from '../services/BackupService.js';
+import ScheduleService from '../services/ScheduleService.js';
+import CrawlerService from '../services/CrawlerService.js';
+import { buildHierarchy } from '../utils/hierarchy.js';
+import { analyzeRegulatoryCompliance, getAgentStatus, analyzeMultiHopCompliance } from '../controllers/aiController.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const RATE_LIMIT_FILE = path.join(__dirname, '..', '..', 'rate-limit.json');
-const scrapeLock = require('../utils/scrapeLock');
-const crypto = require('crypto');
-const { generateToken, authenticateToken, requireRole } = require('../middleware/auth');
 
 const formatLockError = (endpoint, lock) => ({
   success: false,
@@ -321,7 +331,6 @@ router.get('/rules/:rule_code/hierarchy', async (req, res) => {
       raw: true
     });
 
-    const { buildHierarchy } = require('../utils/hierarchy');
     res.json({ success: true, data: buildHierarchy(rule, allRules) });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1418,13 +1427,16 @@ router.get('/rules/:rule_code/source-docs', authenticateToken, async (req, res) 
 });
 
 // ── AI RAG Compliance Analysis ───────────────────────────────────────────────
-const aiController = require('../controllers/aiController');
+// POST /api/analyze - Analisis isu hukum via RAG + lex-integrity-agent (single-pass)
+router.post('/analyze', authenticateToken, analyzeRegulatoryCompliance);
 
-// POST /api/analyze - Analisis isu hukum via RAG + lex-integrity-agent
-router.post('/analyze', authenticateToken, aiController.analyzeRegulatoryCompliance);
+// POST /api/analyze/multi-hop - Analisis multi-hop (ReAct) untuk query kompleks
+router.post('/analyze/multi-hop', authenticateToken, analyzeMultiHopCompliance);
 
 // GET /api/analyze/status - Cek ketersediaan agent & pgvector
-router.get('/analyze/status', aiController.getAgentStatus);
+router.get('/analyze/status', getAgentStatus);
 
-module.exports = router;
+export default router;
+
+
 

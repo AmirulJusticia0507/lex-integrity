@@ -1,9 +1,9 @@
 // Analytics utilities
-const { Op } = require('sequelize');
-const { sequelize } = require('../models');
-const Rule = require('../models/Rule');
+import { Op } from 'sequelize';
+import { sequelize } from '../models/index.js';
+import Rule from '../models/Rule.js';
 
-const getAnalytics = async () => {
+export const getAnalytics = async () => {
   const totalRules = await Rule.count();
   
   const rulesByRegime = await Rule.findAll({
@@ -41,7 +41,7 @@ const getAnalytics = async () => {
   };
 };
 
-const getRecentRules = async (limit = 5) => {
+export const getRecentRules = async (limit = 5) => {
   return await Rule.findAll({
     attributes: ['rule_code', 'title', 'regime', 'category', 'created_at', 'view_count'],
     order: [['created_at', 'DESC']],
@@ -49,7 +49,7 @@ const getRecentRules = async (limit = 5) => {
   });
 };
 
-module.exports = {
+export default {
   getAnalytics,
   getRecentRules
-};
+};

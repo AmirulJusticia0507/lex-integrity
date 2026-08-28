@@ -1,10 +1,11 @@
 // BullMQ worker untuk memproses peraturan dengan LLM
-require('dotenv').config();
+import 'dotenv/config';
+import Bull from 'bull';
+import { createClient } from 'redis';
+import Rule from './models/Rule.js';
+import { Ollama } from 'ollama';
 
-const Bull = require('bull');
-const redis = require('redis').createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
-const Rule = require('./models/Rule');
-const { Ollama } = require('ollama');
+const redis = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
 
 const ollama = new Ollama({
   host: process.env.OLLAMA_BASE_URL || 'http://localhost:11434'

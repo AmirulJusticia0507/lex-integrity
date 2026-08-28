@@ -124,6 +124,7 @@ async function run() {
 
     const srcCount = await Rule.count({ where: { source: SOURCE } });
     console.log(`[${SOURCE}] SELESAI. Total di DB dari source ini: ${srcCount}`);
+    await sequelize.close();
     process.exit(0);
   } catch (error) {
     console.error('Error:', error);

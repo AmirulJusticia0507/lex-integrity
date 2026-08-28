@@ -1,4 +1,4 @@
-const Redis = require('redis');
+import { createClient } from 'redis';
 
 class CacheService {
   constructor() {
@@ -8,7 +8,7 @@ class CacheService {
 
   async connect() {
     try {
-      this.redis = Redis.createClient({
+      this.redis = createClient({
         url: process.env.REDIS_URL || 'redis://localhost:6379',
         password: process.env.REDIS_PASSWORD || undefined,
         socket: {
@@ -90,4 +90,4 @@ class CacheService {
   }
 }
 
-module.exports = new CacheService();
+export default new CacheService();

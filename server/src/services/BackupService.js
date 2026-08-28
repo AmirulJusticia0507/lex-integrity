@@ -3,10 +3,17 @@
  * di folder server/backups/. Dipakai oleh tombol manual di UI dan
  * jadwal otomatis (ScheduleService).
  */
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import Rule from '../models/Rule.js';
+import User from '../models/User.js';
+import Role from '../models/Role.js';
 
-const BACKUP_DIR = path.join(__dirname, '..', '..', 'backups');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export const BACKUP_DIR = path.join(__dirname, '..', '..', 'backups');
 const DEFAULT_RETENTION_DAYS = 90;
 
 function safeName(label) {
@@ -14,11 +21,7 @@ function safeName(label) {
   return clean || 'manual';
 }
 
-async function createBackup(label = 'manual') {
-  const Rule = require('../models/Rule');
-  const User = require('../models/User');
-  const Role = require('../models/Role');
-
+export async function createBackup(label = 'manual') {
   const [rules, users, roles] = await Promise.all([
     Rule.findAll({ raw: true }),
     User.findAll({ raw: true }),
@@ -59,7 +62,7 @@ async function createBackup(label = 'manual') {
 }
 
 /** Hapus backup lebih tua dari retentionDays. */
-function cleanupOld(retentionDays = DEFAULT_RETENTION_DAYS) {
+export function cleanupOld(retentionDays = DEFAULT_RETENTION_DAYS) {
   if (!fs.existsSync(BACKUP_DIR)) return { removed: 0 };
   const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
   let removed = 0;
@@ -78,7 +81,7 @@ function cleanupOld(retentionDays = DEFAULT_RETENTION_DAYS) {
   return { removed };
 }
 
-function listBackups() {
+export function listBackups() {
   if (!fs.existsSync(BACKUP_DIR)) return [];
   return fs.readdirSync(BACKUP_DIR)
     .filter((f) => f.endsWith('.json'))
@@ -90,4 +93,5 @@ function listBackups() {
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
-module.exports = { createBackup, cleanupOld, listBackups, BACKUP_DIR };
+export default { createBackup, cleanupOld, listBackups, BACKUP_DIR };
+

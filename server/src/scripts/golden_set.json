@@ -1,0 +1,74 @@
+{
+  "test_cases": [
+    {
+      "id": "gold-001",
+      "query": "Apakah Perda Sleman No 5/2023 bertentangan dengan UU 23/2014 tentang Pemerintahan Daerah?",
+      "expected_rules": ["UU-23-2014", "PERDA-SLEMAN-5-2023"],
+      "expected_contradiction": true,
+      "category": "hierarchy_conflict"
+    },
+    {
+      "id": "gold-002",
+      "query": "Apa sanksi bagi pejabat yang menyalahgunakan wewenang diskresi dalam Peraturan Daerah?",
+      "expected_rules": ["UU-30-2014", "UU-28-1999", "UU-31-1999"],
+      "expected_contradiction": false,
+      "category": "sanction_lookup"
+    },
+    {
+      "id": "gold-003",
+      "query": "Bagaimana dampak humaniter dari Perpres tentang Rute Transmigrasi terhadap masyarakat adat?",
+      "expected_rules": ["UU-18-2012", "UU-39-1999", "PERPRES-TRANSMIGRASI"],
+      "expected_contradiction": null,
+      "category": "humanitarian_impact"
+    },
+    {
+      "id": "gold-004",
+      "query": "Apakah pasal karet dalam Perda Retribusi Daerah berpotensi korupsi?",
+      "expected_rules": ["UU-28-2009", "UU-31-1999", "PERDA-RETRIBUSI"],
+      "expected_contradiction": true,
+      "category": "loophole_detection"
+    },
+    {
+      "id": "gold-005",
+      "query": "Konflik antara UU Cipta Kerja dan Peraturan Menteri Ketenagakerjaan tentang PHK",
+      "expected_rules": ["UU-11-2020", "UU-13-2003", "PERMEN-KENAKER-PHK"],
+      "expected_contradiction": true,
+      "category": "hierarchy_conflict"
+    },
+    {
+      "id": "gold-006",
+      "query": "Apakah Perda tentang Pemanfaatan Ruang Publik mengandung pasal karet yang merugikan pedagang kaki lima?",
+      "expected_rules": ["UU-26-2007", "PERDA-RUANG-PUBLIK"],
+      "expected_contradiction": true,
+      "category": "loophole_detection"
+    },
+    {
+      "id": "gold-007",
+      "query": "Sanksi pidana bagi pejabat publik yang melanggar UU Tipikor melalui produk hukum turunan",
+      "expected_rules": ["UU-31-1999", "UU-28-1999", "PP-28-2019"],
+      "expected_contradiction": false,
+      "category": "sanction_lookup"
+    },
+    {
+      "id": "gold-008",
+      "query": "Kontradiksi antara UU Minerba dan Perda Daerah tentang Izin Usaha Pertambangan Rakyat",
+      "expected_rules": ["UU-4-2009", "UU-3-2020", "PERDA-IZIN-PERTAMBANGAN"],
+      "expected_contradiction": true,
+      "category": "hierarchy_conflict"
+    },
+    {
+      "id": "gold-009",
+      "query": "Dampak Perpres tentang Penugasan TNI ke Bidang Sipil terhadap HAM warga sipil",
+      "expected_rules": ["UU-39-1999", "UU-34-2004", "PERPRES-TNI-SIPIL"],
+      "expected_contradiction": null,
+      "category": "humanitarian_impact"
+    },
+    {
+      "id": "gold-010",
+      "query": "Apakah Perda Pajak Daerah mengandung wewenang diskresi tanpa kriteria jelas?",
+      "expected_rules": ["UU-28-2009", "UU-23-2014", "PERDA-PAJAK-DAERAH"],
+      "expected_contradiction": true,
+      "category": "loophole_detection"
+    }
+  ]
+}

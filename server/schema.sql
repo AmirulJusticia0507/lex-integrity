@@ -4,6 +4,7 @@
 
 -- Enable UUID extension if needed
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS vector;
 
 -- =============================================
 -- TABLE: users
@@ -54,6 +55,7 @@ CREATE TABLE IF NOT EXISTS rules (
     processed_at TIMESTAMP,
     processed_by VARCHAR(100),
     processing_method VARCHAR(50),
+    embedding vector(768),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -69,6 +71,27 @@ CREATE INDEX IF NOT EXISTS idx_rules_source ON rules(source);
 CREATE INDEX IF NOT EXISTS idx_rules_publish_date ON rules(publish_date);
 CREATE INDEX IF NOT EXISTS idx_rules_view_count ON rules(view_count);
 CREATE INDEX IF NOT EXISTS idx_rules_slug ON rules(slug);
+CREATE INDEX IF NOT EXISTS idx_rules_embedding ON rules USING hnsw (embedding vector_cosine_ops)
+  WITH (m = 16, ef_construction = 64);
+
+-- =============================================
+-- TABLE: rule_chunks (for adaptive chunking embeddings)
+-- =============================================
+CREATE TABLE IF NOT EXISTS rule_chunks (
+    id SERIAL PRIMARY KEY,
+    rule_code VARCHAR(100) NOT NULL REFERENCES rules(rule_code) ON DELETE CASCADE,
+    chunk_text TEXT NOT NULL,
+    chunk_metadata JSONB DEFAULT '{}'::jsonb,
+    embedding vector(768),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(rule_code, chunk_text)
+);
+
+CREATE INDEX IF NOT EXISTS idx_rule_chunks_rule_code ON rule_chunks(rule_code);
+CREATE INDEX IF NOT EXISTS idx_rule_chunks_embedding ON rule_chunks USING hnsw (embedding vector_cosine_ops)
+  WITH (m = 16, ef_construction = 64);
+CREATE INDEX IF NOT EXISTS idx_rule_chunks_metadata ON rule_chunks USING GIN (chunk_metadata);
 
 -- =============================================
 -- TABLE: analytics
@@ -143,6 +166,13 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS update_rules_updated_at ON rules;
 CREATE TRIGGER update_rules_updated_at
     BEFORE UPDATE ON rules
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger for rule_chunks table
+DROP TRIGGER IF EXISTS update_rule_chunks_updated_at ON rule_chunks;
+CREATE TRIGGER update_rule_chunks_updated_at
+    BEFORE UPDATE ON rule_chunks
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 

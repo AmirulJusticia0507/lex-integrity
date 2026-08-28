@@ -10,11 +10,17 @@
  * Terintegrasi scrapeLock: bila endpoint sedang discraping manual,
  * jadwal akan dilewati (skip) — dan sebaliknya.
  */
-const cron = require('node-cron');
-const fs = require('fs');
-const path = require('path');
-const { exec } = require('child_process');
-const scrapeLock = require('../utils/scrapeLock');
+import cron from 'node-cron';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
+import scrapeLock from '../utils/scrapeLock.js';
+import BackupService from './BackupService.js';
+import CrawlerService from './CrawlerService.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const CONFIG_PATH = path.join(__dirname, '..', '..', 'scrape-schedule.json');
 const DEFAULT_JOGJA_ENDPOINT = 'https://spl.jogjaprov.go.id/dev-jdih-etalase/public/produk-hukum/';
@@ -127,7 +133,6 @@ class ScheduleService {
           ({ message } = await this._runQueue(job));
           break;
         case 'backup': {
-          const BackupService = require('./BackupService');
           const result = await BackupService.createBackup(job.params?.label || 'terjadwal');
           BackupService.cleanupOld(this.config?.backup_retention_days);
           message = `Backup dibuat: ${result.filename}`;
@@ -159,7 +164,7 @@ class ScheduleService {
       return { skipped: true, message: `Endpoint sedang dipakai scraping lain, jadwal dilewati.` };
     }
     try {
-      const cmd = `node "${path.join(__dirname, '..', 'scripts', 'loadJogjaJdih.js')}" --start ${start} --end ${end} ${noClear ? '--no-clear' : ''}`;
+      const cmd = `node "${path.join(__dirname, '..', 'scripts', 'loadJogjaJdih.cjs')}" --start ${start} --end ${end} ${noClear ? '--no-clear' : ''}`;
       const { err } = await execAsync(cmd, {
         maxBuffer: 1024 * 1024 * 10,
         timeout: 600000,
@@ -210,7 +215,6 @@ class ScheduleService {
       }
       lockedSources.push(src);
     }
-    const CrawlerService = require('./CrawlerService');
     await CrawlerService.queueScheduledScrape(sources, `sched_${Date.now()}`);
     return { message: `Scraping dijadwalkan untuk: ${sources.join(', ')}` };
   }
@@ -235,4 +239,5 @@ class ScheduleService {
   }
 }
 
-module.exports = new ScheduleService();
+export default new ScheduleService();
+

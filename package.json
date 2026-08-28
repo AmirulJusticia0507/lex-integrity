@@ -9,6 +9,7 @@
     "lint": "cd server && npx eslint src && cd client && npx eslint src"
   },
   "dependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "node-fetch": "^3.3.2"
   }
 }

@@ -3,9 +3,9 @@
  * (internasional → nasional → provinsi → kabupaten/kota) dan mencari
  * peraturan terkait antar jenjang berdasarkan kemiripan kata kunci judul.
  */
-const LEVELS = ['internasional', 'nasional', 'provinsi', 'kabupaten_kota'];
+export const LEVELS = ['internasional', 'nasional', 'provinsi', 'kabupaten_kota'];
 
-const LEVEL_LABELS = {
+export const LEVEL_LABELS = {
   internasional: 'Internasional',
   nasional: 'Nasional',
   provinsi: 'Provinsi',
@@ -20,7 +20,7 @@ const STOPWORDS = new Set([
   'no.', 'lhkn', 'sebagai', 'berdasarkan', 'dengan'
 ]);
 
-function getJdihLevel(rule = {}) {
+export function getJdihLevel(rule = {}) {
   const src = String(rule.source || '').toLowerCase();
   const cat = String(rule.category || '').toLowerCase();
 
@@ -65,7 +65,7 @@ function similarity(keywordsA, keywordsB) {
  * @param {object} sourceRule Instance Rule (raw)
  * @param {Array} allRules Semua rule (attributes ringkas)
  */
-function buildHierarchy(sourceRule, allRules) {
+export function buildHierarchy(sourceRule, allRules) {
   const sourceKeywords = extractKeywords(`${sourceRule.title} ${String(sourceRule.content || '').slice(0, 400)}`, 12);
 
   const buckets = Object.fromEntries(LEVELS.map((l) => [l, []]));
@@ -122,4 +122,5 @@ function buildHierarchy(sourceRule, allRules) {
   };
 }
 
-module.exports = { getJdihLevel, buildHierarchy, LEVELS, LEVEL_LABELS };
+export default { getJdihLevel, buildHierarchy, LEVELS, LEVEL_LABELS };
+

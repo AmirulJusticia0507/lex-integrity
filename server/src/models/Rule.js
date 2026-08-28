@@ -1,5 +1,5 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
 
 const Rule = sequelize.define('Rule', {
   id: {
@@ -96,4 +96,4 @@ const Rule = sequelize.define('Rule', {
   timestamps: false
 });
 
-module.exports = Rule;
+export default Rule;

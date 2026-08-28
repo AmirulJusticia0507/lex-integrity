@@ -1,7 +1,7 @@
-const { Op } = require('sequelize');
-const Rule = require('../models/Rule');
-const { getEmbedding } = require('../utils/embedding');
-const cacheService = require('./CacheService');
+import { Op } from 'sequelize';
+import Rule from '../models/Rule.js';
+import { getEmbedding } from '../utils/embedding.js';
+import cacheService from './CacheService.js';
 
 class RAGService {
   async analyzeRule(rule) {
@@ -128,4 +128,4 @@ class RAGService {
   }
 }
 
-module.exports = new RAGService();
+export default new RAGService();

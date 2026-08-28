@@ -3,7 +3,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: lex-integrity-postgres
     restart: unless-stopped
     environment:
@@ -14,7 +14,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./server/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
     ports:
-      - "5432:5432"
+      - "5433:5432"
     networks:
       - lex-network
     healthcheck:
@@ -117,6 +117,29 @@ services:
         condition: service_healthy
     networks:
       - lex-network
+
+  # Cross-Encoder Reranker (Python)
+  reranker:
+    build:
+      context: ./server/src/services/reranker
+      dockerfile: Dockerfile
+    container_name: lex-integrity-reranker
+    restart: unless-stopped
+    environment:
+      RERANKER_MODEL: ${RERANKER_MODEL:-BAAI/bge-reranker-base}
+      RERANKER_PORT: 8001
+    ports:
+      - "8001:8001"
+    networks:
+      - lex-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
 
   # Monitoring (optional)
   # prometheus:

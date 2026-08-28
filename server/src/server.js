@@ -1,10 +1,16 @@
 // Konfigurasi server Express
-require('dotenv').config();
+import 'dotenv/config';
 
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,9 +26,6 @@ app.use(cors({
 }));
 
 // Rate limiting (keyed by client IP; safe now that trust proxy is on)
-const fs = require('fs');
-const path = require('path');
-
 const RATE_LIMIT_FILE = path.join(__dirname, '..', 'rate-limit.json');
 
 function loadRateLimitSettings() {
@@ -64,7 +67,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Redis client
-const redis = require('redis').createClient({
+import { createClient } from 'redis';
+
+const redis = createClient({
   url: process.env.REDIS_URL || 'redis://localhost:6379',
   password: process.env.REDIS_PASSWORD || undefined,
   socket: {
@@ -101,7 +106,7 @@ app.get('/health', async (req, res) => {
   }
   
   try {
-    const sequelize = require('./config/database');
+    const { sequelize } = await import('./config/database.js');
     await sequelize.authenticate();
     const [results] = await sequelize.query('SELECT COUNT(*) as cnt FROM rules');
     const count = results[0].cnt || 0;
@@ -133,7 +138,7 @@ app.get('/health', async (req, res) => {
   
   // Check Bull queue availability
   try {
-    const Bull = require('bull');
+    const Bull = (await import('bull')).default;
     const queue = new Bull('rule processing', {
       redis: {
         port: parseInt(process.env.REDIS_PORT) || 6379,
@@ -160,7 +165,8 @@ app.get('/health', async (req, res) => {
 });
 
 // API Routes
-app.use('/api', require('./routes/api'));
+import apiRoutes from './routes/api.js';
+app.use('/api', apiRoutes);
 
 // 404 handler (path-less middleware avoids decodeURIComponent on stray
 // literal %PUBLIC_URL%/... requests that the CRA proxy may forward)
@@ -183,7 +189,7 @@ const startServer = async () => {
     await redis.connect();
     
     // Sync database tables
-    const { sequelize } = require('./models');
+    const { sequelize } = await import('./models/index.js');
     
     await sequelize.sync();
     console.log('📊 Database tables synced');
@@ -216,7 +222,8 @@ const startServer = async () => {
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 
     // Scheduler scraping & backup otomatis (konfigurasi: server/scrape-schedule.json)
-    require('./services/ScheduleService').init();
+    const ScheduleService = (await import('./services/ScheduleService.js')).default;
+    ScheduleService.init();
 
     // Naikkan timeout untuk inferensi LLM 14b (bisa sampai 5 menit)
     server.timeout          = 600000; // 10 menit max
@@ -225,7 +232,7 @@ const startServer = async () => {
     // Graceful shutdown
     process.on('SIGTERM', () => {
       console.log('SIGTERM diterima, menghentikan server...');
-      require('./services/ScheduleService').stopAll();
+      ScheduleService.stopAll();
       server.close(() => {
         console.log('Server ditutup');
         redis.quit();
@@ -239,8 +246,8 @@ const startServer = async () => {
   }
 };
 
-if (require.main === module) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   startServer();
 }
 
-module.exports = { app, startServer };
+export { app, startServer };

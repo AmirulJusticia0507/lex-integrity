@@ -1,8 +1,8 @@
 // Service for business logic
-const { Op } = require('sequelize');
-const Rule = require('../models/Rule');
+import { Op } from 'sequelize';
+import Rule from '../models/Rule.js';
 
-const searchRules = async (filters) => {
+export const searchRules = async (filters) => {
   const {
     search,
     regime,
@@ -44,7 +44,7 @@ const searchRules = async (filters) => {
   };
 };
 
-const getRuleByCode = async (rule_code) => {
+export const getRuleByCode = async (rule_code) => {
   const rule = await Rule.findOne({ where: { rule_code } });
   if (!rule) {
     throw new Error('Peraturan tidak ditemukan');
@@ -58,7 +58,8 @@ const getRuleByCode = async (rule_code) => {
   return rule;
 };
 
-module.exports = {
+export default {
   searchRules,
   getRuleByCode
 };
+

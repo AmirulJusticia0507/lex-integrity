@@ -8,10 +8,10 @@
  * Fail-open: jika Redis tidak tersedia, scraping tetap diizinkan
  * agar fitur utama tidak mati hanya karena guard ini.
  */
-const Redis = require('redis');
+import { createClient } from 'redis';
 
 const KEY_PREFIX = 'lex:scrape_lock:';
-const redis = Redis.createClient({
+const redis = createClient({
   url: process.env.REDIS_URL || 'redis://localhost:6379',
   password: process.env.REDIS_PASSWORD || undefined,
   socket: {
@@ -46,7 +46,7 @@ const keyFor = (endpoint) => `${KEY_PREFIX}${encodeURIComponent(endpoint)}`;
  * @param {number} ttlSec Batas maksimal lock (detik), wajib lebih besar dari runtime terpanjang
  * @returns {Promise<{acquired: boolean, degraded?: boolean, started_at?: string, ttl?: number}>}
  */
-async function acquire(endpoint, ttlSec = 900) {
+export async function acquire(endpoint, ttlSec = 900) {
   try {
     await ensureConnected();
     const startedAt = new Date().toISOString();
@@ -66,7 +66,7 @@ async function acquire(endpoint, ttlSec = 900) {
   }
 }
 
-async function release(endpoint) {
+export async function release(endpoint) {
   if (endpoint == null) return;
   try {
     if (!redis.isOpen) return;
@@ -76,4 +76,5 @@ async function release(endpoint) {
   }
 }
 
-module.exports = { acquire, release };
+export default { acquire, release };
+
