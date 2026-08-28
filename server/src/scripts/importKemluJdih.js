@@ -1,6 +1,6 @@
 // Script untuk import dokumen hukum dari jdih.kemlu.go.id ke PostgreSQL
-const Rule = require('../models/Rule');
-const sequelize = require('../config/database');
+import Rule from '../models/Rule.js';
+import sequelize from '../config/database.js';
 
 const API_URL = 'https://jdih.kemlu.go.id/panel/items/dokumen_hukum';
 const SOURCE = 'jdih.kemlu.go.id';

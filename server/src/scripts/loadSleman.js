@@ -1,7 +1,11 @@
 // Script untuk load hasil scraping JDIH Sleman ke PostgreSQL
-const path = require('path');
-const fs = require('fs');
-const Rule = require('../models/Rule');
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import Rule from '../models/Rule.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const SOURCE = 'jdih.slemankab.go.id';
 

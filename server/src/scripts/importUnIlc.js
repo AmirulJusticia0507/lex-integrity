@@ -1,8 +1,12 @@
 // Import UN ILC docs dari JSON ke PostgreSQL
-const fs = require('fs');
-const path = require('path');
-const Rule = require('../models/Rule');
-const sequelize = require('../config/database');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import Rule from '../models/Rule.js';
+import sequelize from '../config/database.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const JSON_FILE = path.join(__dirname, '..', '..', '..', 'scripts', 'scraper', 'un_ilc_docs.json');
 const SOURCE = 'legal.un.org/ilc';
