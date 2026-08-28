@@ -385,7 +385,6 @@ router.post('/chat', authenticateToken, async (req, res) => {
       });
     }
     
-    const { Ollama } = require('ollama');
     const ollama = new Ollama({
       host: process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
     });
@@ -672,8 +671,7 @@ router.get('/analytics/matrix', async (req, res) => {
 router.post('/actions/scrape', authenticateToken, async (req, res) => {
   try {
     const { sources = ['jdih.slemankab.go.id'], source = 'sleman' } = req.body;
-    const { exec } = require('child_process');
-    const path = require('path');
+
     const batchId = `batch_${Date.now()}`;
     const outPath = path.join(__dirname, '..', '..', '..', 'scripts', 'scraper', 'sleman_rules_tmp.json');
 
@@ -707,7 +705,7 @@ router.post('/actions/scrape', authenticateToken, async (req, res) => {
         }
         lockedSources.push(src);
       }
-      const CrawlerService = require('../services/CrawlerService');
+
       await CrawlerService.queueScheduledScrape(sources, batchId);
       res.json({
         success: true,
@@ -724,8 +722,7 @@ router.post('/actions/scrape', authenticateToken, async (req, res) => {
 router.post('/actions/analyze-batch', authenticateToken, async (req, res) => {
   try {
     const { limit = 100 } = req.body;
-    const { fork } = require('child_process');
-    const path = require('path');
+
     // Worker.js memproses queue; pastikan worker berjalan di background
     const workerPath = path.join(__dirname, '..', 'worker.js');
     let worker;
@@ -774,7 +771,7 @@ router.get('/analytics/export', authenticateToken, async (req, res) => {
 // POST /api/actions/clear-cache - Bersihkan cache Redis
 router.post('/actions/clear-cache', authenticateToken, async (req, res) => {
   try {
-    const CacheService = require('../services/CacheService');
+
     await CacheService.connect();
     await CacheService.flush();
     res.json({
@@ -831,7 +828,7 @@ router.get('/categories', async (req, res) => {
 // GET /api/queue/stats - Get Bull queue statistics
 router.get('/queue/stats', authenticateToken, async (req, res) => {
   try {
-    const Bull = require('bull');
+
     const queue = new Bull('rule processing', {
       redis: {
         port: parseInt(process.env.REDIS_PORT) || 6379,
@@ -1078,7 +1075,7 @@ router.post('/auth/login', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Username atau password salah' });
     }
 
-    const { generateToken } = require('../middleware/auth');
+
     const token = generateToken({ id: user.id, username: user.username, role: user.role });
 
     res.json({
@@ -1261,8 +1258,7 @@ router.post('/actions/scrape-jogja', authenticateToken, async (req, res) => {
       endpoint = 'https://spl.jogjaprov.go.id/dev-jdih-etalase/public/produk-hukum/'
     } = req.body;
     
-    const { exec } = require('child_process');
-    const path = require('path');
+
     const batchId = `jogja_${Date.now()}`;
     
     // Tolak scraping dobel dari endpoint yang sama (TTL 15 menit > timeout proses 10 menit)
@@ -1303,7 +1299,7 @@ router.post('/actions/scrape-jogja', authenticateToken, async (req, res) => {
 // POST /api/actions/create-backup - Buat backup data inti (rules, users, roles)
 router.post('/actions/create-backup', authenticateToken, async (req, res) => {
   try {
-    const BackupService = require('../services/BackupService');
+
     const result = await BackupService.createBackup(req.body?.name || 'manual');
     res.json({
       success: true,
@@ -1318,7 +1314,7 @@ router.post('/actions/create-backup', authenticateToken, async (req, res) => {
 // GET /api/actions/backups - Daftar file backup yang tersedia
 router.get('/actions/backups', authenticateToken, async (req, res) => {
   try {
-    const BackupService = require('../services/BackupService');
+
     res.json({ success: true, data: BackupService.listBackups() });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1328,7 +1324,7 @@ router.get('/actions/backups', authenticateToken, async (req, res) => {
 // GET /api/actions/schedules - Status scheduler scraping & backup
 router.get('/actions/schedules', authenticateToken, async (req, res) => {
   try {
-    res.json({ success: true, data: require('../services/ScheduleService').getStatus() });
+    res.json({ success: true, data: ScheduleService.getStatus() });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

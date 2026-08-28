@@ -1,6 +1,5 @@
-const { Op } = require('sequelize');
-const { sequelize } = require('../models');
-const Rule = require('../models/Rule');
+import { Op } from 'sequelize';
+import { sequelize, Rule } from '../models/index.js';
 
 class RuleController {
   async getAllRules(req, res) {
@@ -279,4 +278,4 @@ class RuleController {
   }
 }
 
-module.exports = new RuleController();
+export default new RuleController();
