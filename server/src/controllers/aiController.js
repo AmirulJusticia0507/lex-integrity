@@ -5,7 +5,6 @@
 
 import { Pool } from 'pg';
 import { Ollama } from 'ollama';
-import fetch from 'node-fetch';
 import { 
   finalResponseValidator, 
   validateAndRepair, 
