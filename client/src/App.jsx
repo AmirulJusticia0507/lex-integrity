@@ -24,6 +24,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import { Sidebar, PageWrapper, MobileTopBar } from './components/layout';
 import { AuthProvider, RequireAuth } from './components/auth/AuthContext';
+import { Analytics } from '@vercel/analytics/react';
 import './utils/http';
 import './index.css';
 
@@ -215,6 +216,7 @@ function App() {
           <AuthProvider>
             <AnimatedRoutes />
             <Toaster position="top-right" />
+            <Analytics />
           </AuthProvider>
         </AnalyticsProvider>
       </RuleProvider>
