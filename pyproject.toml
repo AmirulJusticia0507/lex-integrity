@@ -1,0 +1,2 @@
+[tool.vercel]
+entrypoint = "server.src.services.reranker.reranker:app"
