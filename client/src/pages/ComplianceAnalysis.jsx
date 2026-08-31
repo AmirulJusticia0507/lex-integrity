@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { authFetch } from '../utils/http';
 import {
-  Brain, Search, AlertTriangle, CheckCircle, ShieldAlert, Scale,
+  Brain, Search, AlertTriangle, CheckCircle, Shield, Scale,
   FileText, ChevronRight, Loader2, Circle, ArrowRight, RefreshCw,
   Zap, Database, Cpu, Info, XCircle, Activity
 } from 'lucide-react';
