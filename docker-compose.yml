@@ -137,7 +137,7 @@ services:
   # Cross-Encoder Reranker (Python)
   reranker:
     build:
-      context: ./server/src/services/reranker
+      context: ./reranker
       dockerfile: Dockerfile
     container_name: lex-integrity-reranker
     restart: unless-stopped
