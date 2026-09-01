@@ -77,7 +77,8 @@ const redis = createClient({
       if (options.total_retry_time > 1000 * 60 * 60) {
         return new Error('Redis reconnect time exceeded');
       }
-      return options.errorCount > 10 ? new Error('Redis max retries reached') : null;
+      if (options.errorCount > 10) return new Error('Redis max retries reached');
+      return Math.min(options.attempt * 100, 3000);
     }
   }
 });
