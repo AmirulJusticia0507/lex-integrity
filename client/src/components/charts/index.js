@@ -2,9 +2,9 @@ import React from 'react';
 import { LineChart as RLineChart, Line, BarChart as RBarChart, Bar, PieChart as RPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const LineChart = ({ data = [], title, description, height = 300 }) => (
-  <div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-800">
+  <div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-800" style={{ minWidth: 0, overflow: 'hidden' }}>
     {title && <h3 className="text-lg font-semibold text-gray-800 mb-4 dark:text-gray-100">{title}</h3>}
-    <div style={{ height: `${height}px` }}>
+    <div style={{ height: `${height}px`, width: '100%', overflow: 'hidden' }}>
       <ResponsiveContainer width="100%" height="100%">
         <RLineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -21,9 +21,9 @@ const LineChart = ({ data = [], title, description, height = 300 }) => (
 );
 
 const BarChart = ({ data = [], title, description, height = 300 }) => (
-  <div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-800">
+  <div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-800" style={{ minWidth: 0, overflow: 'hidden' }}>
     {title && <h3 className="text-lg font-semibold text-gray-800 mb-4 dark:text-gray-100">{title}</h3>}
-    <div style={{ height: `${height}px` }}>
+    <div style={{ height: `${height}px`, width: '100%', overflow: 'hidden' }}>
       <ResponsiveContainer width="100%" height="100%">
         <RBarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -44,9 +44,9 @@ const PieChart = ({ data = [], title, height = 300 }) => {
   const colorFor = (index) => `hsl(${index * 360 / (data.length || 1)}, 70%, 50%)`;
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-800">
+    <div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-800" style={{ minWidth: 0, overflow: 'hidden' }}>
       {title && <h3 className="text-lg font-semibold text-gray-800 mb-4 dark:text-gray-100">{title}</h3>}
-      <div style={{ height: `${height}px` }}>
+      <div style={{ height: `${height}px`, width: '100%', overflow: 'hidden' }}>
         <ResponsiveContainer width="100%" height="100%">
           <RPieChart>
             <Pie

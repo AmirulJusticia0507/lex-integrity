@@ -9,6 +9,7 @@ import { exec, fork } from 'child_process';
 import Bull from 'bull';
 import { Ollama } from 'ollama';
 
+import twilio from 'twilio';
 import { sequelize, Rule, User, Role, Analytics } from '../models/index.js';
 import scrapeLock from '../utils/scrapeLock.js';
 import { generateToken, authenticateToken, requireRole } from '../middleware/auth.js';
@@ -551,11 +552,28 @@ router.get('/rules/:rule_code/conflicts', async (req, res) => {
   }
 });
 
-// GET /api/analytics - Dashboard analytics (total views, trends, breakdowns)
+// GET /api/analytics - Dashboard analytics dengan filter range
 router.get('/analytics', async (req, res) => {
   try {
+    const { range = 'all' } = req.query;
+
+    // Hitung cutoff date berdasarkan range
+    const rangeMap = { '7d': 7, '30d': 30, '90d': 90, '1y': 365 };
+    const days = rangeMap[range];
+    const where = {};
+    if (days) {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - days);
+      // Filter berdasarkan created_at (kapan data masuk) ATAU publish_date
+      where[Op.or] = [
+        { publish_date: { [Op.gte]: cutoff } },
+        { publish_date: null } // tetap sertakan yang belum punya tanggal terbit
+      ];
+    }
+
     const rules = await Rule.findAll({
-      attributes: ['id', 'regime', 'category', 'loopholes', 'view_count', 'publish_date', 'title', 'processed_at', 'content']
+      where,
+      attributes: ['id', 'regime', 'category', 'loopholes', 'view_count', 'publish_date', 'title', 'processed_at']
     });
 
     const total_views = rules.reduce((sum, r) => sum + (r.view_count || 0), 0);
@@ -567,10 +585,11 @@ router.get('/analytics', async (req, res) => {
     const analysisTrendMap = {};
     const categoryMap = {};
     const regimeMap = {};
+
     rules.forEach(r => {
       if (r.publish_date) {
         const year = String(r.publish_date).slice(0, 4);
-        viewTrendMap[year] = (viewTrendMap[year] || 0) + 1;
+        viewTrendMap[year] = (viewTrendMap[year] || 0) + (r.view_count || 1);
         analysisTrendMap[year] = (analysisTrendMap[year] || 0) + 1;
       }
       if (r.category) categoryMap[r.category] = (categoryMap[r.category] || 0) + 1;
@@ -1431,6 +1450,209 @@ router.post('/analyze/multi-hop', authenticateToken, analyzeMultiHopCompliance);
 
 // GET /api/analyze/status - Cek ketersediaan agent & pgvector
 router.get('/analyze/status', getAgentStatus);
+
+// ── WhatsApp Messaging ───────────────────────────────────────────────
+
+const WA_LOG_FILE = path.join(__dirname, '..', '..', 'wa-messages.json');
+
+function readWaMessages() {
+  try {
+    if (fs.existsSync(WA_LOG_FILE)) {
+      return JSON.parse(fs.readFileSync(WA_LOG_FILE, 'utf8'));
+    }
+  } catch (e) { /* ignore */ }
+  return [];
+}
+
+function writeWaMessages(messages) {
+  fs.writeFileSync(WA_LOG_FILE, JSON.stringify(messages, null, 2), 'utf8');
+}
+
+// POST /api/whatsapp/send - Kirim pesan WhatsApp
+router.post('/whatsapp/send', authenticateToken, async (req, res) => {
+  try {
+    const { recipient, message } = req.body;
+
+    if (!recipient || !message) {
+      return res.status(400).json({ success: false, error: 'Nomor dan pesan wajib diisi' });
+    }
+
+    // Validasi format nomor (harus dimulai dengan +)
+    if (!recipient.startsWith('+')) {
+      return res.status(400).json({ success: false, error: 'Nomor harus menggunakan format internasional, contoh: +6281234567890' });
+    }
+
+    // Simpan ke riwayat sebagai pending
+    const messages = readWaMessages();
+    const newMessage = {
+      id: `wa_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      recipient,
+      message,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+    };
+    messages.push(newMessage);
+    writeWaMessages(messages);
+
+    // Kirim via WhatsApp API (Twilio)
+    let twilioResult = null;
+    try {
+      const accountSid = process.env.TWILIO_ACCOUNT_SID;
+      const authToken = process.env.TWILIO_AUTH_TOKEN;
+      const twilioNumber = process.env.TWILIO_PHONE_NUMBER;
+
+      if (!accountSid || !authToken || !twilioNumber) {
+        throw new Error('Konfigurasi Twilio belum lengkap (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER)');
+      }
+
+      const client = twilio(accountSid, authToken);
+
+      const result = await client.messages.create({
+        body: message,
+        from: twilioNumber,
+        to: recipient,
+      });
+
+      twilioResult = { sid: result.sid, status: result.status };
+
+      // Update status jadi success
+      newMessage.status = 'success';
+      newMessage.twilio_sid = result.sid;
+      newMessage.sent_at = new Date().toISOString();
+      writeWaMessages(messages);
+    } catch (twilioError) {
+      // Update status jadi failed
+      newMessage.status = 'failed';
+      newMessage.error = twilioError.message;
+      writeWaMessages(messages);
+
+      // Tetap return sukses tapi dengan catatan gagal (biar user bisa retry)
+      console.error('Twilio send error:', twilioError.message);
+    }
+
+    res.json({
+      success: true,
+      message: twilioResult
+        ? 'Pesan WhatsApp terkirim!'
+        : 'Pesan dicatat tapi pengiriman gagal (cek konfigurasi Twilio)',
+      data: newMessage,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/whatsapp/history - Ambil riwayat pengiriman WhatsApp
+router.get('/whatsapp/history', authenticateToken, async (req, res) => {
+  try {
+    const messages = readWaMessages();
+    res.json({
+      success: true,
+      data: messages.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// DELETE /api/whatsapp/history/:id - Hapus pesan dari riwayat
+router.delete('/whatsapp/history/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    let messages = readWaMessages();
+    const before = messages.length;
+    messages = messages.filter(m => m.id !== id);
+
+    if (messages.length === before) {
+      return res.status(404).json({ success: false, error: 'Pesan tidak ditemukan' });
+    }
+
+    writeWaMessages(messages);
+    res.json({ success: true, message: 'Pesan terhapus dari riwayat' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/whatsapp/send-bulk - Kirim pesan ke banyak nomor
+router.post('/whatsapp/send-bulk', authenticateToken, async (req, res) => {
+  try {
+    const { recipients, message } = req.body;
+
+    if (!Array.isArray(recipients) || recipients.length === 0) {
+      return res.status(400).json({ success: false, error: 'Daftar nomor wajib diisi (array)' });
+    }
+    if (!message) {
+      return res.status(400).json({ success: false, error: 'Pesan wajib diisi' });
+    }
+    if (recipients.length > 50) {
+      return res.status(400).json({ success: false, error: 'Maksimal 50 nomor per pengiriman batch' });
+    }
+
+    // Validasi format semua nomor
+    const invalidNumbers = recipients.filter(r => !r.startsWith('+'));
+    if (invalidNumbers.length > 0) {
+      return res.status(400).json({ success: false, error: `Nomor tidak valid: ${invalidNumbers.join(', ')}` });
+    }
+
+    // Simpan ke riwayat sebagai pending untuk setiap nomor
+    const messages = readWaMessages();
+    const newMessages = recipients.map(recipient => ({
+      id: `wa_${Date.now()}_${Math.random().toString(36).slice(2, 9)}_${recipient.replace('+', '')}`,
+      recipient,
+      message,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+    }));
+    messages.push(...newMessages);
+    writeWaMessages(messages);
+
+    // Kirim via Twilio untuk setiap nomor (sequential)
+    let sent = 0;
+    let failed = 0;
+
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const twilioNumber = process.env.TWILIO_PHONE_NUMBER;
+
+    if (!accountSid || !authToken || !twilioNumber) {
+      return res.status(500).json({
+        success: false,
+        error: 'Konfigurasi Twilio belum lengkap (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER)'
+      });
+    }
+
+    const client = twilio(accountSid, authToken);
+
+    for (const msg of newMessages) {
+      try {
+        const result = await client.messages.create({
+          body: message,
+          from: twilioNumber,
+          to: msg.recipient,
+        });
+        msg.status = 'success';
+        msg.twilio_sid = result.sid;
+        msg.sent_at = new Date().toISOString();
+        sent++;
+      } catch (err) {
+        msg.status = 'failed';
+        msg.error = err.message;
+        failed++;
+      }
+    }
+
+    writeWaMessages(messages);
+
+    res.json({
+      success: true,
+      message: `Pengiriman batch selesai: ${sent} berhasil, ${failed} gagal`,
+      data: { sent, failed, total: recipients.length },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 export default router;
 

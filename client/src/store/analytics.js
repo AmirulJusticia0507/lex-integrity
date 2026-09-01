@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useCallback } from 'react';
 import axios from 'axios';
+import { authFetch } from '../utils/http';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
@@ -33,8 +34,13 @@ function AnalyticsProvider({ children }) {
   const fetchAnalytics = useCallback(async (timeRange = '30d') => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/analytics?range=${timeRange}`);
-      dispatch({ type: 'SET_STATS', payload: response.data.data });
+      const response = await authFetch(`/api/analytics?range=${timeRange}`);
+      const data = await response.json();
+      if (data.success) {
+        dispatch({ type: 'SET_STATS', payload: data.data });
+      } else {
+        dispatch({ type: 'SET_ERROR', payload: data.error || 'Gagal memuat data' });
+      }
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error.message });
     }

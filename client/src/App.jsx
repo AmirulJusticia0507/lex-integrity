@@ -154,7 +154,7 @@ function AnimatedRoutes() {
               element={
                 <PageWrapper>
                   <RequireAuth>
-            <VercelAnalytics />
+                    <Analytics />
                   </RequireAuth>
                 </PageWrapper>
               }
@@ -216,7 +216,7 @@ function App() {
           <AuthProvider>
             <AnimatedRoutes />
             <Toaster position="top-right" />
-            <Analytics />
+            <VercelAnalytics />
           </AuthProvider>
         </AnalyticsProvider>
       </RuleProvider>

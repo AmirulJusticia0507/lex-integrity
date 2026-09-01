@@ -29,7 +29,8 @@
     "pg": "^8.23.0",
     "pg-hstore": "^2.3.4",
     "redis": "^4.6.0",
-    "sequelize": "^6.37.8"
+    "sequelize": "^6.37.8",
+    "twilio": "^6.1.0"
   },
   "devDependencies": {
     "jest": "^29.7.0",

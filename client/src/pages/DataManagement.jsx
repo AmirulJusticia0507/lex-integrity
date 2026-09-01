@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { authFetch } from '../utils/http';
-import { Save, FileText, Download, Upload, Trash2, Database, RefreshCw, UserPlus, CheckCircle2, AlertCircle, UserSquare, Shield, Pencil, Zap, Clock } from 'lucide-react';
+import { Save, FileText, Download, Upload, Trash2, Database, RefreshCw, UserPlus, CheckCircle2, AlertCircle, UserSquare, Shield, Pencil, Zap, Clock, MessageCircle, Send, Phone, Mail, Inbox, Trash } from 'lucide-react';
+
+const WHATSAPP_TEMPLATES = [
+  { id: 'reg_update', label: 'Pemberitahuan Reguling Baru', body: 'Halo {nama}, telah diterbitkan reguling baru: {judul}. Silakan cek di portal Lex Integrity.' },
+  { id: 'violation', label: 'Peringatan Pelanggaran', body: 'Halo {nama}, kami mendeteksi potensi pelanggaran pada reguling {judul}. Mohon perhatikan.' },
+  { id: 'reminder', label: 'Pengingat Analisis', body: 'Halo {nama}, jangan lupa untuk melakukan analisis terhadap reguling terbaru.' },
+  { id: 'report', label: 'Laporan Bulanan', body: 'Halo {nama}, laporan bulanan ketersediaan reguling telah tersedia. Silakan download.' },
+];
 
 const DataManagement = () => {
   const [activeTab, setActiveTab] = useState('backup');
@@ -25,6 +32,15 @@ const DataManagement = () => {
   const [rlLoading, setRlLoading] = useState(false);
   const [rlSaving, setRlSaving] = useState(false);
   const [rlResult, setRlResult] = useState(null);
+
+  // WhatsApp state
+  const [waRecipient, setWaRecipient] = useState('');
+  const [waMessage, setWaMessage] = useState('');
+  const [waTemplate, setWaTemplate] = useState('');
+  const [waSending, setWaSending] = useState(false);
+  const [waHistory, setWaHistory] = useState([]);
+  const [waLoading, setWaLoading] = useState(false);
+  const [waFilter, setWaFilter] = useState('all');
 
   const fetchUsers = async () => {
     setIsUsersLoading(true);
@@ -59,6 +75,7 @@ const DataManagement = () => {
     if (activeTab === 'users') fetchUsers();
     if (activeTab === 'roles') fetchRoles();
     if (activeTab === 'ratelimit') fetchRlSettings();
+    if (activeTab === 'whatsapp') fetchWaHistory();
   }, [activeTab]);
 
   const fetchRlSettings = async () => {
@@ -193,6 +210,83 @@ const DataManagement = () => {
     }
   };
 
+  const fetchWaHistory = async () => {
+    setWaLoading(true);
+    try {
+      const response = await authFetch('/api/whatsapp/history');
+      const data = await response.json();
+      if (data.success) setWaHistory(data.data || []);
+    } catch (error) {
+      console.error('Gagal memuat riwayat WhatsApp:', error);
+    } finally {
+      setWaLoading(false);
+    }
+  };
+
+  const handleSendWhatsApp = async () => {
+    if (!waRecipient || !waMessage.trim()) {
+      toast.error('Nomor dan pesan wajib diisi');
+      return;
+    }
+    setWaSending(true);
+    try {
+      const response = await authFetch('/api/whatsapp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipient: waRecipient, message: waMessage }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        toast.success(data.message || 'Pesan WhatsApp terkirim!');
+        setWaRecipient('');
+        setWaMessage('');
+        setWaTemplate('');
+        fetchWaHistory();
+      } else {
+        toast.error(data.error || 'Gagal mengirim pesan WhatsApp');
+      }
+    } catch (error) {
+      console.error('Gagal kirim WhatsApp:', error);
+      toast.error('Tidak dapat terhubung ke server');
+    } finally {
+      setWaSending(false);
+    }
+  };
+
+  const handleTemplateSelect = (templateId) => {
+    const tmpl = WHATSAPP_TEMPLATES.find(t => t.id === templateId);
+    if (tmpl) {
+      setWaTemplate(templateId);
+      setWaMessage(tmpl.body);
+    }
+  };
+
+  const handleDeleteWaMessage = async (id) => {
+    if (!confirm('Hapus pesan ini dari riwayat?')) return;
+    try {
+      const response = await authFetch(`/api/whatsapp/history/${id}`, { method: 'DELETE' });
+      if (response.ok && (await response.json()).success) {
+        toast.success('Riwayat terhapus');
+        fetchWaHistory();
+      }
+    } catch (error) {
+      console.error('Gagal hapus:', error);
+    }
+  };
+
+  const handleClearWaHistory = async () => {
+    if (!confirm('Hapus semua riwayat WhatsApp?')) return;
+    try {
+      const response = await authFetch('/api/whatsapp/history', { method: 'DELETE' });
+      if (response.ok && (await response.json()).success) {
+        toast.success('Semua riwayat terhapus');
+        setWaHistory([]);
+      }
+    } catch (error) {
+      console.error('Gagal hapus:', error);
+    }
+  };
+
   const handleCreateBackup = async () => {
     setIsCreatingBackup(true);
     try {
@@ -241,7 +335,8 @@ const DataManagement = () => {
     { id: 'cleanup', label: 'Cleanup', icon: Trash2 },
     { id: 'users', label: 'User Management', icon: UserSquare },
     { id: 'roles', label: 'Role Permissions', icon: Shield },
-    { id: 'ratelimit', label: 'Rate Limiting', icon: Zap }
+    { id: 'ratelimit', label: 'Rate Limiting', icon: Zap },
+    { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle }
   ];
   
   return (
@@ -744,6 +839,176 @@ const DataManagement = () => {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════════════
+              WAHATAPP TAB
+              ═══════════════════════════════════════════════════════════════════ */}
+          {activeTab === 'whatsapp' && (
+            <div className="space-y-6">
+              {/* ── Kirim Pesan ── */}
+              <div className="bg-white rounded-lg shadow-md dark:bg-gray-800 p-6">
+                <h3 className="text-lg font-semibold mb-4 dark:text-gray-100 flex items-center gap-2">
+                  <Send className="h-5 w-5 text-green-500" />
+                  Kirim Pesan WhatsApp
+                </h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                      Nomor Tujuan
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="tel"
+                        placeholder="+6281234567890"
+                        value={waRecipient}
+                        onChange={(e) => setWaRecipient(e.target.value)}
+                        className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">Gunakan format internasional, contoh: +6281234567890</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                      Pesan
+                    </label>
+                    <textarea
+                      value={waMessage}
+                      onChange={(e) => { setWaMessage(e.target.value); setWaTemplate(''); }}
+                      placeholder="Tulis pesan di sini..."
+                      rows={4}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 resize-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                      atau Pilih Template:
+                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {WHATSAPP_TEMPLATES.map(tmpl => (
+                        <button
+                          key={tmpl.id}
+                          onClick={() => handleTemplateSelect(tmpl.id)}
+                          className={`px-3 py-2 border rounded-lg text-left text-sm transition-colors ${
+                            waTemplate === tmpl.id
+                              ? 'border-green-500 bg-green-50 text-green-700 dark:bg-green-900/20 dark:border-green-500'
+                              : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600 dark:text-gray-300'
+                          }`}
+                        >
+                          <p className="font-medium">{tmpl.label}</p>
+                          <p className="text-xs text-gray-500 mt-0.5 dark:text-gray-400">{tmpl.body.slice(0, 60)}...</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleSendWhatsApp}
+                    disabled={waSending || !waMessage.trim() || !waRecipient}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                  >
+                    {waSending ? (
+                      <><RefreshCw className="h-4 w-4 animate-spin" /> Mengirim...</>
+                    ) : (
+                      <><Send className="h-4 w-4" /> Kirim Pesan</>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* ── Riwayat Pengiriman ── */}
+              <div className="bg-white rounded-lg shadow-md dark:bg-gray-800 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold dark:text-gray-100 flex items-center gap-2">
+                    <Inbox className="h-5 w-5 text-blue-500" />
+                    Riwayat Pengiriman
+                  </h3>
+                  <div className="flex gap-2">
+                    <select
+                      value={waFilter}
+                      onChange={(e) => setWaFilter(e.target.value)}
+                      className="px-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                    >
+                      <option value="all">Semua</option>
+                      <option value="success">Berhasil</option>
+                      <option value="failed">Gagal</option>
+                      <option value="pending">Menunggu</option>
+                    </select>
+                    {waHistory.length > 0 && (
+                      <button
+                        onClick={handleClearWaHistory}
+                        className="flex items-center gap-1 px-3 py-1.5 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20 text-sm transition-colors"
+                      >
+                        <Trash className="h-3.5 w-3.5" />
+                        Bersihkan
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {waLoading ? (
+                  <div className="flex items-center justify-center py-8 text-gray-400">
+                    <RefreshCw className="h-5 w-5 animate-spin mr-2" />
+                    Memuat riwayat...
+                  </div>
+                ) : waHistory.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400 dark:text-gray-500">
+                    <MessageCircle className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                    <p>Belum ada riwayat pengiriman</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-200 text-left text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                          <th className="py-2 pr-4">Nomor</th>
+                          <th className="py-2 pr-4">Pesan</th>
+                          <th className="py-2 pr-4">Status</th>
+                          <th className="py-2 pr-4">Tanggal</th>
+                          <th className="py-2 text-right">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {waHistory
+                          .filter(item => waFilter === 'all' || item.status === waFilter)
+                          .map(item => (
+                          <tr key={item.id} className="border-b border-gray-100 dark:border-gray-700">
+                            <td className="py-3 pr-4 font-medium text-gray-800 dark:text-gray-200">{item.recipient}</td>
+                            <td className="py-3 pr-4 text-gray-600 dark:text-gray-300 max-w-xs truncate">{item.message}</td>
+                            <td className="py-3 pr-4">
+                              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                item.status === 'success'
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                  : item.status === 'failed'
+                                    ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              }`}>
+                                {item.status === 'success' ? '✓ Berhasil' : item.status === 'failed' ? '✗ Gagal' : '⏳ Menunggu'}
+                              </span>
+                            </td>
+                            <td className="py-3 pr-4 text-gray-500 dark:text-gray-400">
+                              {item.created_at ? new Date(item.created_at).toLocaleString('id-ID') : '-'}
+                            </td>
+                            <td className="py-3 text-right">
+                              <button
+                                onClick={() => handleDeleteWaMessage(item.id)}
+                                className="text-red-500 hover:text-red-700 transition-colors"
+                                title="Hapus"
+                              >
+                                <Trash className="h-4 w-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
