@@ -15,22 +15,47 @@ const remote = new Client({ connectionString: railwayUrl, ssl: { rejectUnauthori
 await local.connect();
 await remote.connect();
 
+// Ambil kolom yang ada di remote untuk hindari mismatch (embedding dll)
+async function getRemoteColumns(client, table) {
+  const { rows } = await client.query(`SELECT column_name FROM information_schema.columns WHERE table_name=$1`, [table]);
+  return new Set(rows.map(r => r.column_name));
+}
+
 const tables = ['users', 'roles', 'rules'];
 for (const table of tables) {
   try {
     const { rows } = await local.query(`SELECT * FROM ${table}`);
     console.log(`[${table}] local: ${rows.length} rows`);
     if (rows.length === 0) continue;
+    const remoteCols = await getRemoteColumns(remote, table);
+    console.log(`[${table}] remote cols: ${[...remoteCols].join(',')}`);
     // truncate remote then insert
     await remote.query(`TRUNCATE ${table} RESTART IDENTITY CASCADE`);
-    for (const row of rows) {
-      const cols = Object.keys(row);
-      const vals = cols.map((_, i) => `$${i+1}`);
-      await remote.query(`INSERT INTO ${table} (${cols.join(',')}) VALUES (${vals.join(',')})`, Object.values(row));
+    // Batch insert 500 rows biar cepat via public proxy
+    const BATCH = 500;
+    let ok = 0;
+    const sampleCols = Object.keys(rows[0]).filter(c => remoteCols.has(c));
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const batch = rows.slice(i, i + BATCH);
+      const cols = sampleCols;
+      const values = [];
+      const placeholders = batch.map((row, bi) => {
+        const rowVals = cols.map(c => {
+          let v = row[c];
+          if (table === 'roles' && c === 'permissions' && typeof v === 'object') v = JSON.stringify(v);
+          values.push(v);
+          return `$${values.length}`;
+        });
+        return `(${rowVals.join(',')})`;
+      }).join(',');
+      await remote.query(`INSERT INTO ${table} (${cols.join(',')}) VALUES ${placeholders}`, values);
+      ok += batch.length;
+      console.log(`[${table}] ${ok}/${rows.length}`);
     }
-    console.log(`[${table}] copied ${rows.length}`);
+    console.log(`[${table}] copied ${ok}/${rows.length}`);
   } catch (e) {
     console.log(`[${table}] skip: ${e.message}`);
+    console.error(e);
   }
 }
 await local.end();
