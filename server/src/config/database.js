@@ -1,7 +1,7 @@
 import { Sequelize } from 'sequelize';
 
 // Railway / Render menyediakan DATABASE_URL, prioritas utama
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_PRIVATE_URL || process.env.DATABASE_PUBLIC_URL;
 
 const sequelize = databaseUrl
   ? new Sequelize(databaseUrl, {

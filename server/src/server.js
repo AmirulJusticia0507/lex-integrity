@@ -70,7 +70,7 @@ app.use(express.urlencoded({ extended: true }));
 import { createClient } from 'redis';
 
 const redis = createClient({
-  url: process.env.REDIS_URL || 'redis://localhost:6379',
+  url: process.env.REDIS_URL || process.env.REDIS_PRIVATE_URL || process.env.REDIS_PUBLIC_URL || 'redis://localhost:6379',
   password: process.env.REDIS_PASSWORD || undefined,
   socket: {
     reconnectStrategy: (options) => {
