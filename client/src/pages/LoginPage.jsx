@@ -4,6 +4,7 @@ import { Scale, Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, Loader2, ShieldChec
 import CapCaptcha from '../components/auth/CapCaptcha';
 import { useAuth } from '../components/auth/AuthContext';
 import { goGoogleLogin, handleGoogleCallback } from '../components/auth/googleAuth';
+import { apiUrl } from '../utils/http';
 
 const GoogleIcon = () => (
   <svg className="h-4 w-4" viewBox="0 0 48 48">
@@ -66,7 +67,7 @@ const LoginPage = () => {
     }
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(apiUrl('/api/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username_or_email: identifier, password }),

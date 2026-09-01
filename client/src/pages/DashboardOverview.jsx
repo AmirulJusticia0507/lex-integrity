@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, Database, Brain, Cloud, Shield, Cpu, RefreshCw, Play, Zap as ZapIcon, Database as DatabaseIcon, Trash2 as Broom, ExternalLink, ArrowRight } from 'lucide-react';
-import { authFetch } from '../utils/http';
+import { authFetch, apiUrl } from '../utils/http';
 
 const DashboardOverview = () => {
   const [systemHealth, setSystemHealth] = useState({
@@ -16,7 +16,7 @@ const DashboardOverview = () => {
       const healthData = {};
       
       try {
-        const response = await fetch('/health');
+        const response = await fetch(apiUrl('/health'));
         const health = await response.json();
         
         healthData.database = health.database === 'connected' ? 'healthy' : 'error';

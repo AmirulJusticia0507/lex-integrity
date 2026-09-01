@@ -42,8 +42,10 @@ export const theme = {
 };
 
 // API configuration
+// Di Vercel production, SET REACT_APP_API_URL ke URL backend (mis. https://lex-integrity-api.railway.app)
+// Jika kosong, fallback ke localhost untuk dev lokal (jangan dipakai di production)
 export const apiConfig = {
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3000',
+  baseURL: (process.env.REACT_APP_API_URL || 'http://localhost:3000').replace(/\/$/, ''),
   endpoints: {
     health: '/api/health',
     rules: {

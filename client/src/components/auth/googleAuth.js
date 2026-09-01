@@ -1,3 +1,5 @@
+import { apiUrl } from '../../utils/http';
+
 const keycloakBase =
   process.env.REACT_APP_SSO_KEYCLOAK_BASE ||
   'https://sso.jogjaprov.go.id/realms/aptika/protocol/openid-connect';
@@ -57,7 +59,7 @@ export async function handleGoogleCallback(code) {
   // Tukar identitas SSO dengan sesi lokal (JWT internal) agar token
   // konsisten dengan middleware authenticateToken di backend.
   try {
-    const ssoRes = await fetch('/api/auth/sso', {
+    const ssoRes = await fetch(apiUrl('/api/auth/sso'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Scale, Mail, Eye, EyeOff, ArrowLeft, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import PasswordStrengthMeter, { validatePassword } from '../components/auth/PasswordStrengthMeter';
+import { apiUrl } from '../utils/http';
 
 const ResetPassword = () => {
   const [email, setEmail] = useState('');
@@ -24,7 +25,7 @@ const ResetPassword = () => {
     }
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/reset-password', {
+      const response = await fetch(apiUrl('/api/auth/reset-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

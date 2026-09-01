@@ -4,12 +4,11 @@ WORKDIR /app
 
 RUN apk add --no-cache python3 py3-pip make g++ cairo-dev pango-dev giflib-dev libc6-compat
 
-COPY server/package*.json ./
+# Support build dari root (docker-compose) maupun dari ./server (Railway)
+COPY package*.json ./
+COPY ./ ./
 
-WORKDIR /app/server
 RUN npm ci --only=production
-
-COPY server/ ./
 
 EXPOSE 3000
 
