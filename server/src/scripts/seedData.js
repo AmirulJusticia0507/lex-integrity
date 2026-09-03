@@ -1,6 +1,6 @@
 // Script untuk seed data aturan
-const seedData = require('../../../scripts/seedData');
-const Rule = require('../models/Rule');
+import seedData from '../../../scripts/seedData.js';
+import { Rule } from '../models/index.js';
 
 const seedDatabase = async () => {
   try {
@@ -34,8 +34,8 @@ const seedDatabase = async () => {
   }
 };
 
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   seedDatabase();
 }
 
-module.exports = seedDatabase;
+export default seedDatabase;
