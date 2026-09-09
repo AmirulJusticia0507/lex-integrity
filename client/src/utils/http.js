@@ -40,7 +40,7 @@ axios.interceptors.request.use((config) => {
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if ([401, 403].includes(error.response?.status)) {
       handleUnauthorized();
     }
     return Promise.reject(error);
@@ -56,5 +56,10 @@ export function authFetch(input, init = {}) {
     headers.set('Authorization', `Bearer ${token}`);
   }
   const url = typeof input === 'string' && input.startsWith('/api') ? apiUrl(input) : input;
-  return fetch(url, { ...init, headers });
+  return fetch(url, { ...init, headers }).then((response) => {
+    if ([401, 403].includes(response.status)) {
+      handleUnauthorized();
+    }
+    return response;
+  });
 }
