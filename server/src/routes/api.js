@@ -18,6 +18,7 @@ import ScheduleService from '../services/ScheduleService.js';
 import CrawlerService from '../services/CrawlerService.js';
 import { getBullRedisConfig } from '../config/redis.js';
 import { fetchOllama } from '../config/ollama.js';
+import { generateGeminiResponse, getGeminiModel, hasGemini } from '../config/gemini.js';
 import { buildHierarchy } from '../utils/hierarchy.js';
 import { analyzeRegulatoryCompliance, getAgentStatus, analyzeMultiHopCompliance } from '../controllers/aiController.js';
 
@@ -387,7 +388,9 @@ router.post('/chat', authenticateToken, async (req, res) => {
       });
     }
     
-    const modelName = process.env.OLLAMA_AGENT_MODEL || process.env.OLLAMA_MODEL || 'lex-integrity-agent:latest';
+    const modelName = hasGemini()
+      ? getGeminiModel()
+      : process.env.OLLAMA_AGENT_MODEL || process.env.OLLAMA_MODEL || 'lex-integrity-agent:latest';
 
     // RAG context: Cari pasal dari PostgreSQL jika ada rule_id atau dari pencarian kata kunci
     let extraContext = '';
@@ -456,35 +459,45 @@ router.post('/chat', authenticateToken, async (req, res) => {
       : message;
     chatMessages.push({ role: 'user', content: userPrompt });
 
-    let completion;
+    let rawContent;
     try {
-      const ollamaResponse = await fetchOllama('/api/chat', {
-        method: 'POST',
-        body: JSON.stringify({
-          model: modelName,
+      if (hasGemini()) {
+        const geminiResponse = await generateGeminiResponse({
+          systemPrompt,
           messages: chatMessages,
-          stream: false,
-          options: {
-            temperature: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.2,
-            num_ctx: 4096
-          }
-        })
-      });
+          temperature: parseFloat(process.env.GEMINI_TEMPERATURE || process.env.OLLAMA_TEMPERATURE) || 0.2
+        });
+        rawContent = geminiResponse.text;
+      } else {
+        const ollamaResponse = await fetchOllama('/api/chat', {
+          method: 'POST',
+          body: JSON.stringify({
+            model: modelName,
+            messages: chatMessages,
+            stream: false,
+            options: {
+              temperature: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.2,
+              num_ctx: 4096
+            }
+          })
+        });
 
-      if (!ollamaResponse.ok) {
-        throw new Error(`Ollama HTTP ${ollamaResponse.status}: ${(await ollamaResponse.text()).slice(0, 200)}`);
+        if (!ollamaResponse.ok) {
+          throw new Error(`Ollama HTTP ${ollamaResponse.status}: ${(await ollamaResponse.text()).slice(0, 200)}`);
+        }
+
+        const completion = await ollamaResponse.json();
+        rawContent = completion.message?.content || '';
       }
-
-      completion = await ollamaResponse.json();
-    } catch (ollamaError) {
+    } catch (modelError) {
       return res.status(503).json({
         success: false,
-        error: 'Ollama / Lex Integrity Agent belum tersedia dari server backend.',
-        details: process.env.NODE_ENV === 'development' ? ollamaError.message : undefined
+        error: hasGemini()
+          ? 'Gemini API belum tersedia dari server backend.'
+          : 'Ollama / Lex Integrity Agent belum tersedia dari server backend.',
+        details: process.env.NODE_ENV === 'development' ? modelError.message : undefined
       });
     }
-
-    let rawContent = completion.message?.content || '';
 
     // Strip <think>...</think> tags if DeepSeek-R1 reasoning is included
     let cleanResponse = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
