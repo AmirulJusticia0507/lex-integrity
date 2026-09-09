@@ -1138,9 +1138,10 @@ router.delete('/users/:id', authenticateToken, requireRole('admin'), async (req,
 // GET /api/roles - List roles with permissions (seed defaults if empty)
 router.get('/roles', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
-    await Promise.all(Object.entries(DEFAULT_ROLES).map(([name, permissions]) =>
-      Role.findOrCreate({ where: { name }, defaults: { permissions } })
-    ));
+    for (const [name, permissions] of Object.entries(DEFAULT_ROLES)) {
+      const role = await Role.findOne({ where: { name } });
+      if (!role) await Role.create({ name, permissions });
+    }
     const roles = await Role.findAll({
       attributes: ['id', 'name', 'permissions', 'created_at'],
       order: [['name', 'ASC']],
