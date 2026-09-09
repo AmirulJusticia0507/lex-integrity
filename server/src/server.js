@@ -10,6 +10,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { getBullRedisConfig } from './config/redis.js';
 import { getOllamaBaseUrl, ollamaHeaders } from './config/ollama.js';
+import { getGeminiModel, hasGemini } from './config/gemini.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -103,7 +104,10 @@ app.get('/health', async (req, res) => {
   const health = {
     timestamp: new Date().toISOString(),
     status: 'ok',
-    diagnostic_version: 'health-timeout-v2'
+    diagnostic_version: 'health-timeout-v2',
+    ai_provider: hasGemini() ? 'gemini' : 'ollama',
+    chat_model: hasGemini() ? getGeminiModel() : process.env.OLLAMA_AGENT_MODEL || process.env.OLLAMA_MODEL || 'lex-integrity-agent:latest',
+    gemini: hasGemini() ? 'configured' : 'not_configured'
   };
   
   try {

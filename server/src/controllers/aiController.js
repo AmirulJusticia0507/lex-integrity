@@ -11,6 +11,7 @@ import {
 } from '../utils/schemaValidator.js';
 import { applyGuardrails, moderateInput } from '../utils/guardrails.js';
 import { createOllamaClient, fetchOllama, getOllamaBaseUrl } from '../config/ollama.js';
+import { getGeminiModel, hasGemini } from '../config/gemini.js';
 
 // ── PostgreSQL pool (raw, untuk query pgvector) ─────────────────────────────
 const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_PRIVATE_URL || process.env.DATABASE_PUBLIC_URL;
@@ -620,6 +621,28 @@ export const analyzeMultiHopCompliance = async (req, res) => {
 
 // ── CONTROLLER: GET /api/analyze/status ─────────────────────────────────────
 export const getAgentStatus = async (req, res) => {
+  const pgvector = await hasPgvector();
+  if (hasGemini()) {
+    return res.status(200).json({
+      success: true,
+      data: {
+        agent_model:       getGeminiModel(),
+        agent_available:   true,
+        ai_provider:       'gemini',
+        gemini_available:  true,
+        diagnostic_version: 'direct-fetch-ollama-v2',
+        ollama_base_url:    maskUrl(getOllamaBaseUrl()),
+        embed_model:       EMBED_MODEL,
+        pgvector_ready:    pgvector,
+        retrieval_methods: ['hybrid_rrf', 'pgvector', 'bm25'],
+        rrf_k:             RRF_K,
+        reranker:          { available: false },
+        hyde_enabled:      HYDE_ENABLED,
+        hyde_model:        HYDE_MODEL,
+      },
+    });
+  }
+
   try {
     const modelsResponse = await fetchOllama('/api/tags');
     if (!modelsResponse.ok) {
@@ -627,8 +650,7 @@ export const getAgentStatus = async (req, res) => {
     }
     const models = await modelsResponse.json();
     const agentFound = (models.models || []).some(m => m.name === AGENT_MODEL);
-    const pgvector   = await hasPgvector();
-    
+
     let rerankerStatus = { available: false };
     if (RERANKER_ENABLED) {
       try {
@@ -642,6 +664,8 @@ export const getAgentStatus = async (req, res) => {
       data: {
         agent_model:       AGENT_MODEL,
         agent_available:   agentFound,
+        ai_provider:       'ollama',
+        gemini_available:  false,
         diagnostic_version: 'direct-fetch-ollama-v2',
         ollama_base_url:    maskUrl(getOllamaBaseUrl()),
         embed_model:       EMBED_MODEL,
@@ -660,6 +684,8 @@ export const getAgentStatus = async (req, res) => {
       data: {
         agent_model:     AGENT_MODEL,
         agent_available: false,
+        ai_provider:     'ollama',
+        gemini_available: false,
         diagnostic_version: 'direct-fetch-ollama-v2',
         ollama_base_url:  maskUrl(getOllamaBaseUrl()),
         pgvector_ready:  false,

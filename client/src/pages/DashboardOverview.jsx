@@ -7,6 +7,9 @@ const DashboardOverview = () => {
     database: 'checking',
     redis: 'checking',
     ollama: 'checking',
+    gemini: 'checking',
+    aiProvider: 'checking',
+    chatModel: null,
     queue: 'checking',
     api: 'checking'
   });
@@ -27,11 +30,15 @@ const DashboardOverview = () => {
         healthData.database = health.database === 'connected' ? 'healthy' : 'error';
         healthData.redis = health.redis === 'connected' ? 'healthy' : 'error';
         healthData.ollama = health.ollama === 'connected' ? 'healthy' : 'error';
+        healthData.gemini = health.gemini === 'configured' ? 'healthy' : 'error';
+        healthData.aiProvider = health.ai_provider || 'ollama';
+        healthData.chatModel = health.chat_model || null;
+        healthData.ai = health.ai_provider === 'gemini' || health.ollama === 'connected' ? 'healthy' : 'error';
         healthData.queue = health.queue === 'connected' ? 'healthy' : 'error';
         
         setSystemHealth(healthData);
       } catch (error) {
-        setSystemHealth(prev => ({ ...prev, api: 'error', database: 'error', redis: 'error', ollama: 'error', queue: 'error' }));
+        setSystemHealth(prev => ({ ...prev, api: 'error', database: 'error', redis: 'error', ollama: 'error', gemini: 'error', ai: 'error', queue: 'error' }));
       }
     };
     
@@ -70,7 +77,7 @@ const DashboardOverview = () => {
   const systemMetrics = [
     { label: 'Database', value: '85%', icon: Database, status: systemHealth.database },
     { label: 'Redis Cache', value: '92%', icon: Cloud, status: systemHealth.redis },
-    { label: 'Local LLM', value: '78%', icon: Brain, status: systemHealth.ollama },
+    { label: systemHealth.aiProvider === 'gemini' ? 'Gemini API' : 'Local LLM', value: '78%', icon: Brain, status: systemHealth.ai },
     { label: 'Processing Queue', value: '65%', icon: Activity, status: systemHealth.queue },
     { label: 'Security', value: '99%', icon: Shield, status: 'healthy' },
     { label: 'CPU Usage', value: '45%', icon: Cpu, status: 'healthy' }
@@ -135,7 +142,11 @@ const DashboardOverview = () => {
           <StatusLine status={systemHealth.redis} ok="Terhubung ke Redis" fail="Redis tidak tersedia" />
           <StatusLine status="healthy" ok="Rate limiting diaktifkan" fail="Rate limiting tidak aktif" />
           <StatusLine status="healthy" ok="CORS dikonfigurasi" fail="CORS belum dikonfigurasi" />
-          <StatusLine status={systemHealth.ollama} ok="Ollama tersedia" fail="Ollama belum tersedia untuk server production" />
+          {systemHealth.aiProvider === 'gemini' ? (
+            <StatusLine status={systemHealth.gemini} ok={`Gemini API aktif${systemHealth.chatModel ? ` (${systemHealth.chatModel})` : ''}`} fail="Gemini API belum dikonfigurasi" />
+          ) : (
+            <StatusLine status={systemHealth.ollama} ok="Ollama tersedia" fail="Ollama belum tersedia untuk server production" />
+          )}
           <StatusLine status={systemHealth.queue} ok="Queue aktif" fail="Queue belum aktif" />
         </div>
       </div>
