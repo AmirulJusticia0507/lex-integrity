@@ -31,7 +31,11 @@ async function main() {
     throw new Error(`Ollama tunnel check failed: HTTP ${tagsRes.status}`);
   }
 
-  execFileSync('railway', ['variable', 'set', `OLLAMA_BASE_URL=${publicUrl}`, '--service', service], {
+  const railwayCommand = ['variable', 'set', `OLLAMA_BASE_URL=${publicUrl}`, '--service', service];
+  const command = process.platform === 'win32' ? 'cmd.exe' : 'railway';
+  const args = process.platform === 'win32' ? ['/c', 'railway', ...railwayCommand] : railwayCommand;
+
+  execFileSync(command, args, {
     stdio: 'inherit',
   });
 
