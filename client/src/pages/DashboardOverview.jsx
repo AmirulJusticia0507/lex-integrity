@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Database, Brain, Cloud, Shield, Cpu, RefreshCw, Play, Zap as ZapIcon, Database as DatabaseIcon, Trash2 as Broom, ExternalLink, ArrowRight, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Activity, Database, Brain, Cloud, Shield, Cpu, RefreshCw, Play, Zap as ZapIcon, Database as DatabaseIcon, Trash2 as Broom, ExternalLink, ArrowRight, CheckCircle2, XCircle, Loader2, X, Globe2 } from 'lucide-react';
 import { authFetch, apiUrl } from '../utils/http';
 
 const DashboardOverview = () => {
@@ -14,6 +14,35 @@ const DashboardOverview = () => {
     api: 'checking'
   });
   const [actionState, setActionState] = useState({ loading: null, message: null, error: null });
+  const [scrapeModalOpen, setScrapeModalOpen] = useState(false);
+  const [selectedSource, setSelectedSource] = useState('sleman');
+
+  const scrapeSources = [
+    {
+      id: 'sleman',
+      title: 'JDIH Sleman',
+      description: 'Produk hukum dari jdih.slemankab.go.id',
+      endpoint: '/api/actions/scrape',
+      body: { source: 'sleman', sources: ['jdih.slemankab.go.id'] },
+      available: true,
+    },
+    {
+      id: 'jogja',
+      title: 'JDIH DIY / Jogja',
+      description: 'Produk hukum dari SPL JDIH Provinsi DIY',
+      endpoint: '/api/actions/scrape-jogja',
+      body: {},
+      available: true,
+    },
+    {
+      id: 'kpu',
+      title: 'JDIH KPU',
+      description: 'Belum ada scraper KPU di backend',
+      endpoint: null,
+      body: {},
+      available: false,
+    },
+  ];
   
   useEffect(() => {
     const checkSystemHealth = async () => {
@@ -96,6 +125,26 @@ const DashboardOverview = () => {
     }
   };
 
+  const runScrapeSource = async () => {
+    const source = scrapeSources.find(item => item.id === selectedSource);
+    if (!source || !source.available) return;
+
+    setActionState({ loading: 'scrape', message: null, error: null });
+    try {
+      const res = await authFetch(source.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(source.body),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Scraping gagal dijadwalkan');
+      setScrapeModalOpen(false);
+      setActionState({ loading: null, message: data.message || `Scraping ${source.title} dijadwalkan`, error: null });
+    } catch (error) {
+      setActionState({ loading: null, message: null, error: error.message });
+    }
+  };
+
   const StatusLine = ({ status, ok, fail }) => {
     const Icon = status === 'healthy' ? CheckCircle2 : status === 'checking' ? Loader2 : XCircle;
     const text = status === 'healthy' ? ok : status === 'checking' ? `Memeriksa ${ok}` : fail;
@@ -156,7 +205,7 @@ const DashboardOverview = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Mulai Scraping Baru */}
           <button
-            onClick={() => runAction('scrape', 'Scraping')}
+            onClick={() => setScrapeModalOpen(true)}
             disabled={!!actionState.loading}
             className="p-5 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-all duration-200 text-left group disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:hover:bg-blue-900/20 dark:hover:border-blue-800"
           >
@@ -263,6 +312,81 @@ const DashboardOverview = () => {
           </div>
         )}
       </div>
+
+      {scrapeModalOpen && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white shadow-xl dark:bg-gray-800">
+            <div className="flex items-center justify-between border-b border-gray-200 p-5 dark:border-gray-700">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pilih Sumber Scraping</h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Scraping akan dijalankan di latar belakang.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setScrapeModalOpen(false)}
+                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                aria-label="Tutup modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 p-5">
+              {scrapeSources.map(source => (
+                <label
+                  key={source.id}
+                  className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${
+                    selectedSource === source.id
+                      ? 'border-blue-500 bg-blue-50 dark:border-blue-500 dark:bg-blue-900/20'
+                      : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/60'
+                  } ${!source.available ? 'cursor-not-allowed opacity-60' : ''}`}
+                >
+                  <input
+                    type="radio"
+                    name="scrape-source"
+                    value={source.id}
+                    checked={selectedSource === source.id}
+                    disabled={!source.available}
+                    onChange={() => setSelectedSource(source.id)}
+                    className="mt-1"
+                  />
+                  <Globe2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{source.title}</p>
+                      {!source.available && (
+                        <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
+                          segera
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{source.description}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t border-gray-200 p-5 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={() => setScrapeModalOpen(false)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={runScrapeSource}
+                disabled={actionState.loading === 'scrape' || !scrapeSources.find(item => item.id === selectedSource)?.available}
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {actionState.loading === 'scrape' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                Mulai Scraping
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
