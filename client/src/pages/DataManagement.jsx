@@ -10,6 +10,17 @@ const WHATSAPP_TEMPLATES = [
   { id: 'report', label: 'Laporan Bulanan', body: 'Halo {nama}, laporan bulanan ketersediaan reguling telah tersedia. Silakan download.' },
 ];
 
+function normalizePermissions(value) {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 const DataManagement = () => {
   const [activeTab, setActiveTab] = useState('backup');
   const [backupName, setBackupName] = useState('');
@@ -21,6 +32,7 @@ const DataManagement = () => {
   const [availablePermissions, setAvailablePermissions] = useState([]);
   const [isUsersLoading, setIsUsersLoading] = useState(false);
   const [isRolesLoading, setIsRolesLoading] = useState(false);
+  const [rolesError, setRolesError] = useState('');
 
   const [userForm, setUserForm] = useState({ id: null, username: '', email: '', password: '', role: 'user' });
   const [isSavingUser, setIsSavingUser] = useState(false);
@@ -57,15 +69,22 @@ const DataManagement = () => {
 
   const fetchRoles = async () => {
     setIsRolesLoading(true);
+    setRolesError('');
     try {
       const response = await authFetch('/api/roles');
       const data = await response.json();
       if (data.success) {
-        setRoles(data.data);
+        setRoles((data.data || []).map(role => ({
+          ...role,
+          permissions: normalizePermissions(role.permissions),
+        })));
         setAvailablePermissions(data.available_permissions || []);
+      } else {
+        setRolesError(data.error || 'Gagal memuat role');
       }
     } catch (error) {
       console.error('Gagal memuat role:', error);
+      setRolesError('Tidak dapat terhubung ke server');
     } finally {
       setIsRolesLoading(false);
     }
@@ -183,9 +202,10 @@ const DataManagement = () => {
   const handleTogglePermission = (roleName, perm) => {
     setRoles(prev => prev.map(r => {
       if (r.name !== roleName) return r;
-      const perms = r.permissions.includes(perm)
-        ? r.permissions.filter(p => p !== perm)
-        : [...r.permissions, perm];
+      const current = normalizePermissions(r.permissions);
+      const perms = current.includes(perm)
+        ? current.filter(p => p !== perm)
+        : [...current, perm];
       return { ...r, permissions: perms };
     }));
   };
@@ -681,48 +701,66 @@ const DataManagement = () => {
                   Memuat role...
                 </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {roles.map(role => (
-                    <div key={role.id} className="border border-gray-200 rounded-lg p-5 dark:border-gray-700">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-semibold text-gray-800 dark:text-gray-100">{role.name}</h4>
-                        <button
-                          onClick={() => handleSaveRole(role)}
-                          className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                        >
-                          <Save className="h-4 w-4" />
-                          Simpan
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {availablePermissions.map(perm => (
-                          <label
-                            key={perm}
-                            className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer dark:text-gray-300"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={role.permissions.includes(perm)}
-                              onChange={() => handleTogglePermission(role.name, perm)}
-                              className="rounded"
-                            />
-                            {perm}
-                          </label>
-                        ))}
-                      </div>
-                      {roleResults[role.name] && (
-                        <div className={`mt-3 flex items-start gap-2 p-2.5 rounded-lg text-sm ${roleResults[role.name].success
-                            ? 'bg-green-50 text-green-700 dark:bg-gray-700 dark:text-green-400'
-                            : 'bg-red-50 text-red-700 dark:bg-gray-700 dark:text-red-400'}`}>
-                          {roleResults[role.name].success
-                            ? <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                            : <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />}
-                          {roleResults[role.name].message}
-                        </div>
-                      )}
+                <>
+                  {rolesError && (
+                    <div className="flex items-start gap-2 p-3 rounded-lg text-sm bg-red-50 text-red-700 dark:bg-gray-700 dark:text-red-400">
+                      <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      {rolesError}
                     </div>
-                  ))}
-                </div>
+                  )}
+                  {!rolesError && roles.length === 0 && (
+                    <div className="border border-dashed border-gray-300 rounded-lg p-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                      Role belum tersedia.
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {roles.map(role => (
+                      <div key={role.id || role.name} className="border border-gray-200 rounded-lg p-5 dark:border-gray-700">
+                        <div className="flex items-center justify-between gap-3 mb-4">
+                          <div>
+                            <h4 className="font-semibold text-gray-800 capitalize dark:text-gray-100">{role.name}</h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {normalizePermissions(role.permissions).length} permission aktif
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleSaveRole(role)}
+                            className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                          >
+                            <Save className="h-4 w-4" />
+                            Simpan
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {availablePermissions.map(perm => (
+                            <label
+                              key={perm}
+                              className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={normalizePermissions(role.permissions).includes(perm)}
+                                onChange={() => handleTogglePermission(role.name, perm)}
+                                className="rounded"
+                              />
+                              <span className="font-mono text-xs">{perm}</span>
+                            </label>
+                          ))}
+                        </div>
+                        {roleResults[role.name] && (
+                          <div className={`mt-3 flex items-start gap-2 p-2.5 rounded-lg text-sm ${roleResults[role.name].success
+                              ? 'bg-green-50 text-green-700 dark:bg-gray-700 dark:text-green-400'
+                              : 'bg-red-50 text-red-700 dark:bg-gray-700 dark:text-red-400'}`}>
+                            {roleResults[role.name].success
+                              ? <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                              : <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />}
+                            {roleResults[role.name].message}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           )}

@@ -117,6 +117,7 @@ const ROLE_PERMISSIONS = [
 ];
 
 const DEFAULT_ROLES = {
+  superadmin: ROLE_PERMISSIONS,
   admin: ROLE_PERMISSIONS,
   analyst: ['view_dashboard', 'view_rules', 'create_rules', 'edit_rules', 'analyze_rules', 'export_data'],
   user: ['view_dashboard', 'view_rules', 'analyze_rules', 'export_data']
@@ -1137,12 +1138,9 @@ router.delete('/users/:id', authenticateToken, requireRole('admin'), async (req,
 // GET /api/roles - List roles with permissions (seed defaults if empty)
 router.get('/roles', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
-    const count = await Role.count();
-    if (count === 0) {
-      await Promise.all(Object.entries(DEFAULT_ROLES).map(([name, permissions]) =>
-        Role.create({ name, permissions })
-      ));
-    }
+    await Promise.all(Object.entries(DEFAULT_ROLES).map(([name, permissions]) =>
+      Role.findOrCreate({ where: { name }, defaults: { permissions } })
+    ));
     const roles = await Role.findAll({
       attributes: ['id', 'name', 'permissions', 'created_at'],
       order: [['name', 'ASC']],

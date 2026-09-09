@@ -25,10 +25,10 @@ export const authenticateToken = (req, res, next) => {
 };
 
 export const requireRole = (...roles) => (req, res, next) => {
-  if (!req.user || !roles.includes(req.user.role)) {
+  if (!req.user || (req.user.role !== 'superadmin' && !roles.includes(req.user.role))) {
     return res.status(403).json({ error: 'Akses ditolak: hak akses tidak mencukupi' });
   }
   next();
 };
 
-export default { generateToken, authenticateToken, requireRole };
+export default { generateToken, authenticateToken, requireRole };
