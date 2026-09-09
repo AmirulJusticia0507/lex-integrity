@@ -9,6 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getBullRedisConfig } from './config/redis.js';
+import { ollamaHeaders } from './config/ollama.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -129,7 +130,7 @@ app.get('/health', async (req, res) => {
     const ollamaHost = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
-    const ollamaRes = await fetch(`${ollamaHost}/api/tags`, { signal: controller.signal });
+    const ollamaRes = await fetch(`${ollamaHost}/api/tags`, { signal: controller.signal, headers: ollamaHeaders });
     clearTimeout(timeout);
     if (ollamaRes.ok) {
       const tags = await ollamaRes.json();
