@@ -37,10 +37,10 @@ const DashboardOverview = () => {
     {
       id: 'kpu',
       title: 'JDIH KPU',
-      description: 'Belum ada scraper KPU di backend',
-      endpoint: null,
-      body: {},
-      available: false,
+      description: 'Peraturan KPU terbaru dari jdih.kpu.go.id/peraturan-kpu',
+      endpoint: '/api/actions/scrape',
+      body: { source: 'kpu', sources: ['https://jdih.kpu.go.id/peraturan-kpu'] },
+      available: true,
     },
   ];
   

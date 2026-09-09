@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import { exec, fork } from 'child_process';
 import Bull from 'bull';
+import * as cheerio from 'cheerio';
 
 import twilio from 'twilio';
 import { sequelize, Rule, User, Role, Analytics } from '../models/index.js';
@@ -24,6 +25,73 @@ import { analyzeRegulatoryCompliance, getAgentStatus, analyzeMultiHopCompliance 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const KPU_PERATURAN_URL = 'https://jdih.kpu.go.id/peraturan-kpu';
+
+function toNumber(value) {
+  return parseInt(String(value || '').replace(/[^\d]/g, ''), 10) || 0;
+}
+
+function parseKpuDate(code) {
+  const year = String(code || '').match(/Tahun\s+(\d{4})/i)?.[1];
+  return year ? `${year}-01-01` : null;
+}
+
+async function scrapeKpuPeraturan() {
+  const response = await fetch(KPU_PERATURAN_URL, {
+    headers: {
+      'User-Agent': 'LexIntegrityBot/1.0',
+      'Accept': 'text/html,application/xhtml+xml',
+    },
+  });
+  if (!response.ok) throw new Error(`KPU HTTP ${response.status}`);
+
+  const html = await response.text();
+  const $ = cheerio.load(html);
+  const seen = new Set();
+  const rows = [];
+
+  $('a[href*="/peraturan-kpu/detail/"]').each((_, element) => {
+    const link = $(element);
+    const code = link.text().replace(/\s+/g, ' ').trim();
+    const href = link.attr('href');
+    if (!code || !href || seen.has(href)) return;
+
+    const box = link.closest('.col-md-12, article, .card, .row');
+    const boxText = box.text().replace(/\s+/g, ' ').trim();
+    const title = (box.find('.terbaru__subtitle').first().text() || boxText.match(/Peraturan Komisi Pemilihan Umum[^]+?(?=Dilihat|Unduh|$)/i)?.[0] || '').replace(/\s+/g, ' ').trim();
+    if (!title) return;
+
+    const stats = boxText.match(/Dilihat\s*:?\s*([\d.,]+)(?:\s*Unduh\s*:?\s*([\d.,]+))?/i);
+    seen.add(href);
+    rows.push({
+      rule_code: `KPU-${code.replace(/\s+/g, '-')}`,
+      title: title.slice(0, 497),
+      regime: 'Komisi Pemilihan Umum',
+      category: 'Peraturan KPU',
+      content: `Nomor: ${code}`,
+      is_active: true,
+      publish_date: parseKpuDate(code),
+      source: 'jdih.kpu.go.id',
+      source_url: href.startsWith('http') ? href : new URL(href, KPU_PERATURAN_URL).toString(),
+      view_count: toNumber(stats?.[1]),
+      download_count: toNumber(stats?.[2]),
+      processed_at: new Date().toISOString(),
+      processed_by: 'scraper-kpu-jdih',
+      processing_method: 'scrape',
+    });
+  });
+
+  const deduped = Array.from(new Map(rows.map(row => [row.rule_code, row])).values());
+  if (deduped.length) {
+    await Rule.bulkCreate(deduped, {
+      updateOnDuplicate: ['title', 'regime', 'category', 'content', 'is_active', 'publish_date', 'source_url', 'view_count', 'download_count', 'processed_at', 'processed_by', 'processing_method'],
+      validate: false,
+    });
+  }
+
+  return deduped;
+}
 
 const RATE_LIMIT_FILE = path.join(__dirname, '..', '..', 'rate-limit.json');
 
@@ -730,6 +798,24 @@ router.post('/actions/scrape', authenticateToken, async (req, res) => {
 
     const batchId = `batch_${Date.now()}`;
     const outPath = path.join(__dirname, '..', '..', '..', 'scripts', 'scraper', 'sleman_rules_tmp.json');
+
+    if (source === 'kpu') {
+      const lock = await scrapeLock.acquire(KPU_PERATURAN_URL, 10 * 60);
+      if (!lock.acquired) {
+        return res.status(409).json(formatLockError(KPU_PERATURAN_URL, lock));
+      }
+
+      scrapeKpuPeraturan()
+        .then(rows => console.log(`[KPU] Scraping selesai: ${rows.length} peraturan`))
+        .catch(error => console.error('[KPU] Scrape error:', error.message))
+        .finally(() => scrapeLock.release(KPU_PERATURAN_URL));
+
+      return res.json({
+        success: true,
+        message: 'Scraping JDIH KPU sedang dijalankan di latar belakang',
+        data: { batch_id: batchId, source: KPU_PERATURAN_URL, status: 'running' }
+      });
+    }
 
     if (source === 'sleman') {
       const SLEMAN_ENDPOINT = 'jdih.slemankab.go.id';
