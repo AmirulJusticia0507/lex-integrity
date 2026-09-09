@@ -17,8 +17,11 @@ await remote.connect();
 
 // Ambil kolom yang ada di remote untuk hindari mismatch (embedding dll)
 async function getRemoteColumns(client, table) {
-  const { rows } = await client.query(`SELECT column_name FROM information_schema.columns WHERE table_name=$1`, [table]);
-  return new Set(rows.map(r => r.column_name));
+  const { rows } = await client.query(
+    `SELECT column_name, data_type FROM information_schema.columns WHERE table_name=$1`,
+    [table]
+  );
+  return new Map(rows.map(r => [r.column_name, r.data_type]));
 }
 
 const tables = ['users', 'roles', 'rules'];
@@ -28,7 +31,7 @@ for (const table of tables) {
     console.log(`[${table}] local: ${rows.length} rows`);
     if (rows.length === 0) continue;
     const remoteCols = await getRemoteColumns(remote, table);
-    console.log(`[${table}] remote cols: ${[...remoteCols].join(',')}`);
+    console.log(`[${table}] remote cols: ${[...remoteCols.keys()].join(',')}`);
     // truncate remote then insert
     await remote.query(`TRUNCATE ${table} RESTART IDENTITY CASCADE`);
     // Batch insert 500 rows biar cepat via public proxy
@@ -42,7 +45,9 @@ for (const table of tables) {
       const placeholders = batch.map((row, bi) => {
         const rowVals = cols.map(c => {
           let v = row[c];
-          if (table === 'roles' && c === 'permissions' && typeof v === 'object') v = JSON.stringify(v);
+          if ((remoteCols.get(c) === 'json' || remoteCols.get(c) === 'jsonb') && typeof v === 'object' && v !== null) {
+            v = JSON.stringify(v);
+          }
           values.push(v);
           return `$${values.length}`;
         });
