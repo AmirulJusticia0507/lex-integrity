@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, LineChart, PieChart } from '../components/charts';
 import { useAnalyticsStore } from '../store/analytics';
-import { TrendingUp, Users, FileText, AlertTriangle, BarChart2, ArrowUpRight } from 'lucide-react';
+import { TrendingUp, Users, FileText, AlertTriangle, BarChart2, ArrowUpRight, Loader2 } from 'lucide-react';
 
 const RANGES = [
   { value: '7d',  label: '7 Hari' },
@@ -10,10 +10,11 @@ const RANGES = [
   { value: '1y',  label: '1 Tahun' },
 ];
 
-const StatCard = ({ title, value, icon: Icon, color, accent, onRefresh }) => (
+const StatCard = ({ title, value, icon: Icon, color, accent, onRefresh, loading }) => (
   <button
     type="button"
     onClick={onRefresh}
+    disabled={loading}
     className="relative w-full overflow-hidden rounded-xl p-5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
     title="Refresh live data"
   >
@@ -24,13 +25,18 @@ const StatCard = ({ title, value, icon: Icon, color, accent, onRefresh }) => (
         <p className="mt-1.5 text-2xl font-bold text-gray-800 dark:text-gray-100">{value ?? '—'}</p>
       </div>
       <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center flex-shrink-0`}>
-        <Icon className="h-5 w-5 text-white" />
+        {loading ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <Icon className="h-5 w-5 text-white" />}
       </div>
     </div>
     <div className="mt-3 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
       <ArrowUpRight className="h-3 w-3" />
-      <span>Live data</span>
+      <span>{loading ? 'Memperbarui...' : 'Live data'}</span>
     </div>
+    {loading && (
+      <div className="absolute bottom-0 left-0 h-1 w-full bg-gray-100 dark:bg-gray-700">
+        <div className="h-full w-2/3 animate-pulse rounded-r-full bg-blue-600" />
+      </div>
+    )}
   </button>
 );
 
@@ -43,6 +49,7 @@ const ChartBox = ({ children }) => (
 
 const Analytics = () => {
   const [timeRange, setTimeRange] = useState('30d');
+  const [refreshingCard, setRefreshingCard] = useState(null);
   const { stats, fetchAnalytics } = useAnalyticsStore();
 
   useEffect(() => {
@@ -55,6 +62,15 @@ const Analytics = () => {
     { title: 'Critical Findings', value: stats.critical_findings, icon: AlertTriangle, color: 'bg-rose-500',    accent: 'bg-rose-500' },
     { title: 'Engagement Rate',   value: stats.engagement_rate,   icon: TrendingUp,    color: 'bg-emerald-500', accent: 'bg-emerald-500' },
   ];
+
+  const refreshLiveData = async (index) => {
+    setRefreshingCard(index);
+    try {
+      await fetchAnalytics(timeRange);
+    } finally {
+      setRefreshingCard(null);
+    }
+  };
 
   return (
     <div className="space-y-6" style={{ isolation: 'isolate' }}>
@@ -91,7 +107,7 @@ const Analytics = () => {
       {/* ── Baris 1: 4 Stat cards ─────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statsCards.map((card, i) => (
-          <StatCard key={i} {...card} onRefresh={() => fetchAnalytics(timeRange)} />
+          <StatCard key={i} {...card} loading={refreshingCard === i} onRefresh={() => refreshLiveData(i)} />
         ))}
       </div>
 
