@@ -1467,6 +1467,16 @@ router.get('/actions/schedules', authenticateToken, async (req, res) => {
   }
 });
 
+// PUT /api/actions/schedules - Simpan konfigurasi scheduler dan reload cron
+router.put('/actions/schedules', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const data = ScheduleService.updateConfig(req.body || {});
+    res.json({ success: true, message: 'Jadwal backup diperbarui', data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
 // GET /api/rules/:rule_code/source-docs - Ambil halaman source_url & ekstrak
 // daftar tautan dokumen (pdf/doc/xls/ppt) untuk ditampilkan di viewer.
 router.get('/rules/:rule_code/source-docs', authenticateToken, async (req, res) => {

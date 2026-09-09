@@ -223,14 +223,39 @@ class ScheduleService {
     return {
       enabled: this.enabled,
       config_path: CONFIG_PATH,
+      timezone: this.config?.timezone || 'Asia/Jakarta',
+      backup_retention_days: this.config?.backup_retention_days || 90,
       jobs: (this.config?.jobs || []).map((j) => ({
         id: j.id,
         type: j.type,
         cron: j.cron,
         enabled: j.enabled !== false,
+        params: j.params || {},
         last_run: this.lastRuns[j.id] || null
       }))
     };
+  }
+
+  updateConfig(nextConfig) {
+    const config = {
+      timezone: nextConfig.timezone || 'Asia/Jakarta',
+      backup_retention_days: parseInt(nextConfig.backup_retention_days, 10) || 90,
+      jobs: Array.isArray(nextConfig.jobs) ? nextConfig.jobs : []
+    };
+
+    for (const job of config.jobs) {
+      if (!job.id || !job.type || !cron.validate(job.cron || '')) {
+        throw new Error(`Jadwal tidak valid: ${job.id || 'tanpa-id'}`);
+      }
+      job.enabled = job.enabled !== false;
+      job.params = job.params || {};
+    }
+
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+    this.stopAll();
+    this.config = null;
+    this.init();
+    return this.getStatus();
   }
 
   stopAll() {
@@ -240,4 +265,3 @@ class ScheduleService {
 }
 
 export default new ScheduleService();
-

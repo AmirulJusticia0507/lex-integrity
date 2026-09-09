@@ -26,6 +26,9 @@ const DataManagement = () => {
   const [backupName, setBackupName] = useState('');
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [scheduleConfig, setScheduleConfig] = useState(null);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleSaving, setScheduleSaving] = useState(false);
 
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -91,6 +94,7 @@ const DataManagement = () => {
   };
 
   useEffect(() => {
+    if (activeTab === 'backup') fetchSchedules();
     if (activeTab === 'users') fetchUsers();
     if (activeTab === 'roles') fetchRoles();
     if (activeTab === 'ratelimit') fetchRlSettings();
@@ -329,6 +333,51 @@ const DataManagement = () => {
       setIsCreatingBackup(false);
     }
   };
+
+  const fetchSchedules = async () => {
+    setScheduleLoading(true);
+    try {
+      const response = await authFetch('/api/actions/schedules');
+      const data = await response.json();
+      if (data.success) setScheduleConfig(data.data);
+      else toast.error(data.error || 'Gagal memuat jadwal backup');
+    } catch (error) {
+      console.error('Failed to fetch schedules:', error);
+      toast.error('Tidak dapat memuat jadwal backup');
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
+  const updateScheduleJob = (id, patch) => {
+    setScheduleConfig(prev => ({
+      ...prev,
+      jobs: (prev?.jobs || []).map(job => job.id === id ? { ...job, ...patch } : job)
+    }));
+  };
+
+  const handleSaveSchedules = async () => {
+    setScheduleSaving(true);
+    try {
+      const response = await authFetch('/api/actions/schedules', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(scheduleConfig),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setScheduleConfig(data.data);
+        toast.success(data.message || 'Jadwal backup disimpan');
+      } else {
+        toast.error(data.error || 'Gagal menyimpan jadwal');
+      }
+    } catch (error) {
+      console.error('Failed to save schedules:', error);
+      toast.error('Tidak dapat terhubung ke server');
+    } finally {
+      setScheduleSaving(false);
+    }
+  };
   
   const handleExportData = (format) => {
     console.log(`Exporting data as ${format}`);
@@ -403,12 +452,82 @@ const DataManagement = () => {
                 </div>
                 
                 <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-700">
-                  <h4 className="font-medium mb-2 dark:text-gray-100">Backup Terjadwal</h4>
-                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                    <div>• Backup harian: 02:00 WIB</div>
-                    <div>• Backup mingguan: Minggu 02:00 WIB</div>
-                    <div>• Backup bulanan: Tanggal 1 02:00 WIB</div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                    <div>
+                      <h4 className="font-medium dark:text-gray-100">Backup Terjadwal</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Timezone: {scheduleConfig?.timezone || 'Asia/Jakarta'}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={fetchSchedules}
+                        disabled={scheduleLoading}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 border rounded-lg text-sm text-gray-700 hover:bg-white disabled:opacity-60 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+                      >
+                        <RefreshCw className={`h-4 w-4 ${scheduleLoading ? 'animate-spin' : ''}`} />
+                        Muat
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveSchedules}
+                        disabled={scheduleSaving || !scheduleConfig}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        <Save className="h-4 w-4" />
+                        {scheduleSaving ? 'Menyimpan...' : 'Simpan'}
+                      </button>
+                    </div>
                   </div>
+
+                  {scheduleLoading && !scheduleConfig ? (
+                    <div className="flex items-center py-4 text-sm text-gray-500 dark:text-gray-300">
+                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                      Memuat jadwal...
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {(scheduleConfig?.jobs || []).filter(job => job.type === 'backup').map(job => (
+                        <div key={job.id} className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:bg-gray-800 dark:border-gray-600 md:grid-cols-[1fr_170px_110px] md:items-center">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-blue-500" />
+                              <span className="font-medium text-gray-800 dark:text-gray-100">{job.id}</span>
+                            </div>
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              Terakhir: {job.last_run ? `${job.last_run.status} - ${new Date(job.last_run.finished_at || job.last_run.at).toLocaleString('id-ID')}` : 'Belum pernah berjalan'}
+                            </p>
+                          </div>
+                          <input
+                            type="text"
+                            value={job.cron}
+                            onChange={(e) => updateScheduleJob(job.id, { cron: e.target.value })}
+                            className="w-full px-3 py-2 border rounded-lg font-mono text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                            placeholder="0 2 * * *"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateScheduleJob(job.id, { enabled: !job.enabled })}
+                            className={`relative h-8 rounded-full transition-colors ${job.enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                            aria-label={`Toggle ${job.id}`}
+                          >
+                            <span className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white transition-transform ${job.enabled ? 'translate-x-[78px]' : ''}`} />
+                          </button>
+                        </div>
+                      ))}
+                      <label className="block">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Retensi backup otomatis (hari)</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={scheduleConfig?.backup_retention_days || 90}
+                          onChange={(e) => setScheduleConfig(prev => ({ ...prev, backup_retention_days: parseInt(e.target.value, 10) || 1 }))}
+                          className="mt-1 w-full max-w-xs px-3 py-2 border rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
