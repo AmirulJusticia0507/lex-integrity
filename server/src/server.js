@@ -84,6 +84,11 @@ const redis = createClient({
   }
 });
 
+const withTimeout = (promise, ms, label) => Promise.race([
+  promise,
+  new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timeout`)), ms))
+]);
+
 redis.on('error', (err) => {
   console.error('Redis connection error:', err);
 });
@@ -144,12 +149,16 @@ app.get('/health', async (req, res) => {
     const queue = new Bull('rule processing', {
       redis: getBullRedisConfig()
     });
-    const [waiting, active, completed, failed] = await Promise.all([
-      queue.getWaitingCount(),
-      queue.getActiveCount(),
-      queue.getCompletedCount(),
-      queue.getFailedCount()
-    ]);
+    const [waiting, active, completed, failed] = await withTimeout(
+      Promise.all([
+        queue.getWaitingCount(),
+        queue.getActiveCount(),
+        queue.getCompletedCount(),
+        queue.getFailedCount()
+      ]),
+      3000,
+      'queue health'
+    );
     await queue.close();
     health.queue = 'connected';
     health.queue_stats = { waiting, active, completed, failed };

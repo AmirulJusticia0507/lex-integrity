@@ -7,7 +7,8 @@ const DashboardOverview = () => {
     database: 'checking',
     redis: 'checking',
     ollama: 'checking',
-    queue: 'checking'
+    queue: 'checking',
+    api: 'checking'
   });
   const [actionState, setActionState] = useState({ loading: null, message: null, error: null });
   
@@ -16,9 +17,13 @@ const DashboardOverview = () => {
       const healthData = {};
       
       try {
-        const response = await fetch(apiUrl('/health'));
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12000);
+        const response = await fetch(apiUrl('/health'), { signal: controller.signal });
+        clearTimeout(timeout);
         const health = await response.json();
         
+        healthData.api = response.ok || health.status === 'ok' ? 'healthy' : 'error';
         healthData.database = health.database === 'connected' ? 'healthy' : 'error';
         healthData.redis = health.redis === 'connected' ? 'healthy' : 'error';
         healthData.ollama = health.ollama === 'connected' ? 'healthy' : 'error';
@@ -26,7 +31,7 @@ const DashboardOverview = () => {
         
         setSystemHealth(healthData);
       } catch (error) {
-        setSystemHealth(prev => ({ ...prev, database: 'error', redis: 'error', ollama: 'error', queue: 'error' }));
+        setSystemHealth(prev => ({ ...prev, api: 'error', database: 'error', redis: 'error', ollama: 'error', queue: 'error' }));
       }
     };
     
@@ -83,6 +88,10 @@ const DashboardOverview = () => {
         return 'text-gray-600 bg-gray-100';
     }
   };
+
+  const StatusLine = ({ status, ok, fail }) => (
+    <div>{status === 'healthy' ? `OK ${ok}` : status === 'checking' ? `... ${ok}` : `ERR ${fail}`}</div>
+  );
   
   return (
     <div className="space-y-6">
@@ -112,22 +121,13 @@ const DashboardOverview = () => {
       <div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-800">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 dark:text-gray-100">Server Logs</h3>
         <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-64 overflow-y-auto">
-          <div>✅ Server berjalan di port 3000</div>
-          <div>✅ Terhubung ke PostgreSQL</div>
-          <div>✅ Terhubung ke Redis</div>
-          <div>✅ API v1 aktif</div>
-          <div>✅ Rate limiting diaktifkan</div>
-          <div>✅ CORS dikonfigurasi</div>
-          {systemHealth.ollama === 'healthy' ? (
-            <div>✅ Ollama tersedia</div>
-          ) : (
-            <div>❌ Ollama tidak tersedia</div>
-          )}
-          {systemHealth.queue === 'healthy' ? (
-            <div>✅ Queue aktif</div>
-          ) : (
-            <div>⚠️ Queue belum aktif</div>
-          )}
+          <StatusLine status={systemHealth.api} ok="API v1 aktif" fail="API v1 tidak merespons" />
+          <StatusLine status={systemHealth.database} ok="Terhubung ke PostgreSQL" fail="PostgreSQL tidak tersedia" />
+          <StatusLine status={systemHealth.redis} ok="Terhubung ke Redis" fail="Redis tidak tersedia" />
+          <div>OK Rate limiting diaktifkan</div>
+          <div>OK CORS dikonfigurasi</div>
+          <StatusLine status={systemHealth.ollama} ok="Ollama tersedia" fail="Ollama belum tersedia untuk server production" />
+          <StatusLine status={systemHealth.queue} ok="Queue aktif" fail="Queue belum aktif" />
         </div>
       </div>
 
@@ -248,3 +248,4 @@ const DashboardOverview = () => {
 };
 
 export default DashboardOverview;
+
