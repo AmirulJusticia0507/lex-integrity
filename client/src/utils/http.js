@@ -27,6 +27,13 @@ export function handleUnauthorized() {
   }
 }
 
+function shouldClearSession(status, data) {
+  if (status === 401) return true;
+  if (status !== 403) return false;
+  const message = String(data?.error || data?.message || '').toLowerCase();
+  return message.includes('invalid token') || message.includes('token');
+}
+
 // Lampirkan token ke semua request axios
 axios.interceptors.request.use((config) => {
   const token = getToken();
@@ -40,7 +47,7 @@ axios.interceptors.request.use((config) => {
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
-    if ([401, 403].includes(error.response?.status)) {
+    if (shouldClearSession(error.response?.status, error.response?.data)) {
       handleUnauthorized();
     }
     return Promise.reject(error);
@@ -56,8 +63,16 @@ export function authFetch(input, init = {}) {
     headers.set('Authorization', `Bearer ${token}`);
   }
   const url = typeof input === 'string' && input.startsWith('/api') ? apiUrl(input) : input;
-  return fetch(url, { ...init, headers }).then((response) => {
+  return fetch(url, { ...init, headers }).then(async (response) => {
+    let data = null;
     if ([401, 403].includes(response.status)) {
+      try {
+        data = await response.clone().json();
+      } catch {
+        data = null;
+      }
+    }
+    if (shouldClearSession(response.status, data)) {
       handleUnauthorized();
     }
     return response;
