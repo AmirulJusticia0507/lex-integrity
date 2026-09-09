@@ -10,7 +10,7 @@ import {
   createFallbackResponse 
 } from '../utils/schemaValidator.js';
 import { applyGuardrails, moderateInput } from '../utils/guardrails.js';
-import { createOllamaClient, fetchOllama } from '../config/ollama.js';
+import { createOllamaClient, fetchOllama, getOllamaBaseUrl } from '../config/ollama.js';
 
 // ── PostgreSQL pool (raw, untuk query pgvector) ─────────────────────────────
 const pool = new Pool({
@@ -62,6 +62,8 @@ const HYBRID_ALPHA = parseFloat(process.env.HYBRID_ALPHA || '0.5');
 // ── HyDE (Hypothetical Document Embeddings) Query Expansion ──────────────────
 const HYDE_ENABLED = process.env.HYDE_ENABLED === 'true';
 const HYDE_MODEL = process.env.HYDE_MODEL || AGENT_MODEL;
+
+const maskUrl = (value = '') => value.replace(/:\/\/([^:@/]+):([^@/]+)@/, '://$1:***@');
 
 async function hydeExpandQuery(userQuery) {
   if (!HYDE_ENABLED) return userQuery;
@@ -633,6 +635,8 @@ export const getAgentStatus = async (req, res) => {
       data: {
         agent_model:       AGENT_MODEL,
         agent_available:   agentFound,
+        diagnostic_version: 'direct-fetch-ollama-v2',
+        ollama_base_url:    maskUrl(getOllamaBaseUrl()),
         embed_model:       EMBED_MODEL,
         pgvector_ready:    pgvector,
         retrieval_methods: ['hybrid_rrf', 'pgvector', 'bm25'],
@@ -649,6 +653,8 @@ export const getAgentStatus = async (req, res) => {
       data: {
         agent_model:     AGENT_MODEL,
         agent_available: false,
+        diagnostic_version: 'direct-fetch-ollama-v2',
+        ollama_base_url:  maskUrl(getOllamaBaseUrl()),
         pgvector_ready:  false,
         error:           error.message,
       },

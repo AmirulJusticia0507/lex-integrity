@@ -102,7 +102,8 @@ redis.on('connect', () => {
 app.get('/health', async (req, res) => {
   const health = {
     timestamp: new Date().toISOString(),
-    status: 'ok'
+    status: 'ok',
+    diagnostic_version: 'health-timeout-v2'
   };
   
   try {
