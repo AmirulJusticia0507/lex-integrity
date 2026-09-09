@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Database, Brain, Cloud, Shield, Cpu, RefreshCw, Play, Zap as ZapIcon, Database as DatabaseIcon, Trash2 as Broom, ExternalLink, ArrowRight } from 'lucide-react';
+import { Activity, Database, Brain, Cloud, Shield, Cpu, RefreshCw, Play, Zap as ZapIcon, Database as DatabaseIcon, Trash2 as Broom, ExternalLink, ArrowRight, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { authFetch, apiUrl } from '../utils/http';
 
 const DashboardOverview = () => {
@@ -89,9 +89,18 @@ const DashboardOverview = () => {
     }
   };
 
-  const StatusLine = ({ status, ok, fail }) => (
-    <div>{status === 'healthy' ? `OK ${ok}` : status === 'checking' ? `... ${ok}` : `ERR ${fail}`}</div>
-  );
+  const StatusLine = ({ status, ok, fail }) => {
+    const Icon = status === 'healthy' ? CheckCircle2 : status === 'checking' ? Loader2 : XCircle;
+    const text = status === 'healthy' ? ok : status === 'checking' ? `Memeriksa ${ok}` : fail;
+    const color = status === 'healthy' ? 'text-green-400' : status === 'checking' ? 'text-yellow-300' : 'text-red-400';
+
+    return (
+      <div className={`flex items-center gap-2 ${color}`}>
+        <Icon className={`h-4 w-4 ${status === 'checking' ? 'animate-spin' : ''}`} />
+        <span>{text}</span>
+      </div>
+    );
+  };
   
   return (
     <div className="space-y-6">
@@ -124,8 +133,8 @@ const DashboardOverview = () => {
           <StatusLine status={systemHealth.api} ok="API v1 aktif" fail="API v1 tidak merespons" />
           <StatusLine status={systemHealth.database} ok="Terhubung ke PostgreSQL" fail="PostgreSQL tidak tersedia" />
           <StatusLine status={systemHealth.redis} ok="Terhubung ke Redis" fail="Redis tidak tersedia" />
-          <div>OK Rate limiting diaktifkan</div>
-          <div>OK CORS dikonfigurasi</div>
+          <StatusLine status="healthy" ok="Rate limiting diaktifkan" fail="Rate limiting tidak aktif" />
+          <StatusLine status="healthy" ok="CORS dikonfigurasi" fail="CORS belum dikonfigurasi" />
           <StatusLine status={systemHealth.ollama} ok="Ollama tersedia" fail="Ollama belum tersedia untuk server production" />
           <StatusLine status={systemHealth.queue} ok="Queue aktif" fail="Queue belum aktif" />
         </div>
