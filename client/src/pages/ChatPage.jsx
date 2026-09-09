@@ -22,7 +22,12 @@ const ChatPage = () => {
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
 
-  const quickPrompts = [
+  const quickPrompts = ruleTitle ? [
+    `Ringkas isu utama dalam ${ruleTitle}.`,
+    `Analisis celah hukum dan pasal karet dalam ${ruleTitle}.`,
+    `Apa dampak kemanusiaan dan keadilan sosial dari ${ruleTitle}?`,
+    `Bandingkan ${ruleTitle} dengan peraturan terkait yang relevan.`
+  ] : [
     'Apa saja celah hukum dalam UU Cipta Kerja bagi pekerja?',
     'Bagaimana sanksi administratif dan pidana terkait pelanggaran tata ruang?',
     'Analisis potensi diskresi berlebihan dalam Perda Sleman.',
@@ -129,7 +134,9 @@ const ChatPage = () => {
         body: JSON.stringify({
           message: userQuery,
           rule_id: ruleId,
-          history: newMessages.slice(-6)
+          rule_code: ruleCode,
+          rule_title: ruleTitle,
+          history: messages.slice(-6)
         }),
       });
 

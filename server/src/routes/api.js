@@ -377,7 +377,7 @@ router.get('/rules/search/suggestions', async (req, res) => {
 // POST /api/chat - Chat with local lex-integrity-agent LLM
 router.post('/chat', authenticateToken, async (req, res) => {
   try {
-    const { message, rule_id, history = [] } = req.body;
+    const { message, rule_id, rule_code, rule_title, history = [] } = req.body;
     
     if (!message) {
       return res.status(400).json({
@@ -394,11 +394,15 @@ router.post('/chat', authenticateToken, async (req, res) => {
 
     // RAG context: Cari pasal dari PostgreSQL jika ada rule_id atau dari pencarian kata kunci
     let extraContext = '';
-    if (rule_id) {
+    if (rule_id || rule_code) {
       try {
-        const rule = await Rule.findByPk(rule_id);
+        const rule = rule_id
+          ? await Rule.findByPk(rule_id)
+          : await Rule.findOne({ where: { rule_code } });
         if (rule) {
-          extraContext = `\n[KONTEKS REGULASI UTAMA DARI DATABASE]\nKode: ${rule.rule_code}\nJudul: ${rule.title}\nIsi: ${(rule.content || '').slice(0, 1000)}\n`;
+          extraContext = `\n[KONTEKS REGULASI UTAMA - WAJIB JADI FOKUS]\nKode: ${rule.rule_code}\nJudul: ${rule.title}\nRezim: ${rule.regime || 'Umum'}\nKategori: ${rule.category || '-'}\nIsi: ${(rule.content || '').slice(0, 1800)}\n`;
+        } else if (rule_code || rule_title) {
+          extraContext = `\n[KONTEKS REGULASI UTAMA - WAJIB JADI FOKUS]\nKode: ${rule_code || '-'}\nJudul: ${rule_title || '-'}\n`;
         }
       } catch (e) {
         console.warn('Chat rule lookup error:', e.message);
@@ -431,7 +435,9 @@ router.post('/chat', authenticateToken, async (req, res) => {
     }
 
     // Build system message & prompt
-    const systemPrompt = `Anda adalah Lex Integrity Agent, asisten AI hukum lokal yang jujur, adil, berempati, dan berpijak pada kemanusiaan serta keadilan sosial di Indonesia. Berikan jawaban yang tepat, berintegritas, dan mudah dipahami.`;
+    const systemPrompt = extraContext
+      ? `Anda adalah Lex Integrity Agent, asisten AI hukum lokal yang jujur, adil, berempati, dan berpijak pada kemanusiaan serta keadilan sosial di Indonesia. Jika ada KONTEKS REGULASI UTAMA, jadikan peraturan itu fokus utama jawaban. Analisis harus merujuk pada kode, judul, dan isi regulasi tersebut. Jangan mengalihkan fokus ke peraturan lain kecuali hanya sebagai pembanding singkat atau jika user memintanya.`
+      : `Anda adalah Lex Integrity Agent, asisten AI hukum lokal yang jujur, adil, berempati, dan berpijak pada kemanusiaan serta keadilan sosial di Indonesia. Berikan jawaban yang tepat, berintegritas, dan mudah dipahami.`;
 
     const chatMessages = [
       { role: 'system', content: systemPrompt }
@@ -448,7 +454,9 @@ router.post('/chat', authenticateToken, async (req, res) => {
       });
     }
 
-    const userPrompt = extraContext ? `${extraContext}\nPertanyaan User: ${message}` : message;
+    const userPrompt = extraContext
+      ? `${extraContext}\nInstruksi: Jawab pertanyaan user dengan fokus pada REGULASI UTAMA di atas. Bila konteks isi terbatas, sebutkan keterbatasannya dan tetap gunakan kode/judul regulasi sebagai pusat analisis.\n\nPertanyaan User: ${message}`
+      : message;
     chatMessages.push({ role: 'user', content: userPrompt });
 
     const completion = await ollama.chat({
