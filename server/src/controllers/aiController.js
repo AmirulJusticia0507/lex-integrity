@@ -4,13 +4,13 @@
  */
 
 import { Pool } from 'pg';
-import { Ollama } from 'ollama';
 import { 
   finalResponseValidator, 
   validateAndRepair, 
   createFallbackResponse 
 } from '../utils/schemaValidator.js';
 import { applyGuardrails, moderateInput } from '../utils/guardrails.js';
+import { createOllamaClient } from '../config/ollama.js';
 
 // ── PostgreSQL pool (raw, untuk query pgvector) ─────────────────────────────
 const pool = new Pool({
@@ -22,9 +22,7 @@ const pool = new Pool({
 });
 
 // ── Ollama client ────────────────────────────────────────────────────────────
-const ollama = new Ollama({
-  host: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-});
+const ollama = createOllamaClient();
 
 // ── Cross-Encoder Reranker client ────────────────────────────────────────────
 const RERANKER_URL = process.env.RERANKER_URL || 'http://localhost:8001';

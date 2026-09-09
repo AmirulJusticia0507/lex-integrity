@@ -3,14 +3,12 @@ import 'dotenv/config';
 import Bull from 'bull';
 import { createClient } from 'redis';
 import Rule from './models/Rule.js';
-import { Ollama } from 'ollama';
 import { getBullRedisConfig } from './config/redis.js';
+import { createOllamaClient } from './config/ollama.js';
 
 const redis = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
 
-const ollama = new Ollama({
-  host: process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
-});
+const ollama = createOllamaClient();
 
 // Queue untuk pemrosesan aturan
 const ruleProcessingQueue = new Bull('rule processing', {

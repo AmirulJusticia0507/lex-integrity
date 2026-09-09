@@ -4,7 +4,6 @@
  * (e.g., UU → PP → Perpres → Perda conflict chains)
  */
 
-import { Ollama } from 'ollama';
 import { Pool } from 'pg';
 import { 
   finalResponseValidator, 
@@ -13,10 +12,9 @@ import {
   validateAndRepair,
   createFallbackResponse
 } from '../utils/schemaValidator.js';
+import { createOllamaClient } from '../config/ollama.js';
 
-const ollama = new Ollama({
-  host: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-});
+const ollama = createOllamaClient();
 
 const pool = new Pool({
   user: process.env.DB_USER || 'postgres',

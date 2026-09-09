@@ -7,7 +7,6 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import { exec, fork } from 'child_process';
 import Bull from 'bull';
-import { Ollama } from 'ollama';
 
 import twilio from 'twilio';
 import { sequelize, Rule, User, Role, Analytics } from '../models/index.js';
@@ -18,6 +17,7 @@ import BackupService from '../services/BackupService.js';
 import ScheduleService from '../services/ScheduleService.js';
 import CrawlerService from '../services/CrawlerService.js';
 import { getBullRedisConfig } from '../config/redis.js';
+import { createOllamaClient } from '../config/ollama.js';
 import { buildHierarchy } from '../utils/hierarchy.js';
 import { analyzeRegulatoryCompliance, getAgentStatus, analyzeMultiHopCompliance } from '../controllers/aiController.js';
 
@@ -387,9 +387,7 @@ router.post('/chat', authenticateToken, async (req, res) => {
       });
     }
     
-    const ollama = new Ollama({
-      host: process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
-    });
+    const ollama = createOllamaClient();
 
     const modelName = process.env.OLLAMA_AGENT_MODEL || process.env.OLLAMA_MODEL || 'lex-integrity-agent:latest';
 
