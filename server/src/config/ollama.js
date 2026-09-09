@@ -27,3 +27,14 @@ export const ollamaHeaders = {
 export function getOllamaBaseUrl() {
   return process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
 }
+
+export async function fetchOllama(path, options = {}) {
+  const base = getOllamaBaseUrl().replace(/\/$/, '');
+  return fetch(`${base}${path}`, {
+    ...options,
+    headers: {
+      ...ollamaHeaders,
+      ...options.headers
+    }
+  });
+}

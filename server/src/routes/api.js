@@ -17,7 +17,7 @@ import BackupService from '../services/BackupService.js';
 import ScheduleService from '../services/ScheduleService.js';
 import CrawlerService from '../services/CrawlerService.js';
 import { getBullRedisConfig } from '../config/redis.js';
-import { createOllamaClient } from '../config/ollama.js';
+import { fetchOllama } from '../config/ollama.js';
 import { buildHierarchy } from '../utils/hierarchy.js';
 import { analyzeRegulatoryCompliance, getAgentStatus, analyzeMultiHopCompliance } from '../controllers/aiController.js';
 
@@ -387,8 +387,6 @@ router.post('/chat', authenticateToken, async (req, res) => {
       });
     }
     
-    const ollama = createOllamaClient();
-
     const modelName = process.env.OLLAMA_AGENT_MODEL || process.env.OLLAMA_MODEL || 'lex-integrity-agent:latest';
 
     // RAG context: Cari pasal dari PostgreSQL jika ada rule_id atau dari pencarian kata kunci
@@ -460,14 +458,24 @@ router.post('/chat', authenticateToken, async (req, res) => {
 
     let completion;
     try {
-      completion = await ollama.chat({
-        model: modelName,
-        messages: chatMessages,
-        options: {
-          temperature: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.2,
-          num_ctx: 4096
-        }
+      const ollamaResponse = await fetchOllama('/api/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          model: modelName,
+          messages: chatMessages,
+          stream: false,
+          options: {
+            temperature: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.2,
+            num_ctx: 4096
+          }
+        })
       });
+
+      if (!ollamaResponse.ok) {
+        throw new Error(`Ollama HTTP ${ollamaResponse.status}: ${(await ollamaResponse.text()).slice(0, 200)}`);
+      }
+
+      completion = await ollamaResponse.json();
     } catch (ollamaError) {
       return res.status(503).json({
         success: false,

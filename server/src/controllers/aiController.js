@@ -10,7 +10,7 @@ import {
   createFallbackResponse 
 } from '../utils/schemaValidator.js';
 import { applyGuardrails, moderateInput } from '../utils/guardrails.js';
-import { createOllamaClient } from '../config/ollama.js';
+import { createOllamaClient, fetchOllama } from '../config/ollama.js';
 
 // ── PostgreSQL pool (raw, untuk query pgvector) ─────────────────────────────
 const pool = new Pool({
@@ -612,7 +612,11 @@ export const analyzeMultiHopCompliance = async (req, res) => {
 // ── CONTROLLER: GET /api/analyze/status ─────────────────────────────────────
 export const getAgentStatus = async (req, res) => {
   try {
-    const models = await ollama.list();
+    const modelsResponse = await fetchOllama('/api/tags');
+    if (!modelsResponse.ok) {
+      throw new Error(`Ollama HTTP ${modelsResponse.status}: ${(await modelsResponse.text()).slice(0, 200)}`);
+    }
+    const models = await modelsResponse.json();
     const agentFound = (models.models || []).some(m => m.name === AGENT_MODEL);
     const pgvector   = await hasPgvector();
     
