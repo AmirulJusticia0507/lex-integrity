@@ -59,10 +59,9 @@ export const Sidebar = () => {
     };
   }, [mobileOpen]);
 
-  // Load chat sessions
-  useEffect(() => {
+  const readChatSessions = () => {
     try {
-      const saved = localStorage.getItem('lex_chat_sessions');
+      const saved = localStorage.getItem(SESSIONS_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
@@ -71,12 +70,38 @@ export const Sidebar = () => {
             setCurrentSessionId(parsed[0].id);
             setShowChatHistory(true);
           }
+          return parsed;
         }
       }
     } catch (e) {
       console.error('Gagal memuat sesi chat:', e);
     }
+    return [];
+  };
+
+  // Load chat sessions
+  useEffect(() => {
+    readChatSessions();
   }, []);
+
+  useEffect(() => {
+    const syncSessions = () => readChatSessions();
+    window.addEventListener('storage', syncSessions);
+    window.addEventListener('lex-chat-sessions-updated', syncSessions);
+    return () => {
+      window.removeEventListener('storage', syncSessions);
+      window.removeEventListener('lex-chat-sessions-updated', syncSessions);
+    };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const sessionId = params.get('session');
+    if (sessionId) {
+      setCurrentSessionId(sessionId);
+      setShowChatHistory(true);
+    }
+  }, [location.search]);
 
   const toggleDark = () => {
     const next = !dark;
@@ -100,23 +125,41 @@ export const Sidebar = () => {
       createdAt: now,
       updatedAt: now,
     };
-    setSessions(prev => [newSession, ...prev]);
+    setSessions(prev => {
+      const next = [newSession, ...prev];
+      localStorage.setItem(SESSIONS_KEY, JSON.stringify(next));
+      window.dispatchEvent(new CustomEvent('lex-chat-sessions-updated', { detail: { source: 'sidebar' } }));
+      return next;
+    });
     setCurrentSessionId(newSession.id);
     setShowChatHistory(true);
+    navigate(`/chat?session=${newSession.id}`);
   };
 
   const loadSession = (session) => {
     setCurrentSessionId(session.id);
     setShowChatHistory(true);
+    const params = new URLSearchParams();
+    params.set('session', session.id);
+    if (session.ruleContext?.rule_id) params.set('rule_id', session.ruleContext.rule_id);
+    if (session.ruleContext?.rule_code) params.set('rule_code', session.ruleContext.rule_code);
+    if (session.ruleContext?.title) params.set('title', session.ruleContext.title);
+    navigate(`/chat?${params.toString()}`);
   };
 
   const deleteSession = (sessionId, e) => {
     e.stopPropagation();
     if (confirm('Hapus percakapan ini?')) {
-      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      setSessions(prev => {
+        const next = prev.filter(s => s.id !== sessionId);
+        localStorage.setItem(SESSIONS_KEY, JSON.stringify(next));
+        window.dispatchEvent(new CustomEvent('lex-chat-sessions-updated', { detail: { source: 'sidebar', deletedId: sessionId } }));
+        return next;
+      });
       if (currentSessionId === sessionId) {
         setCurrentSessionId(null);
         setShowChatHistory(false);
+        navigate('/chat');
       }
     }
   };
@@ -279,16 +322,18 @@ export const Sidebar = () => {
                 </div>
               ) : (
                 sessions.map(session => (
-                  <button
+                  <div
                     key={session.id}
-                    onClick={() => loadSession(session)}
-                    className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors flex items-start gap-2 relative ${
+                    className={`group w-full rounded-lg transition-colors flex items-start gap-2 relative ${
                       currentSessionId === session.id
                         ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800'
                         : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                   >
-                    <div className="flex-1 min-w-0">
+                    <button
+                      onClick={() => loadSession(session)}
+                      className="flex-1 min-w-0 text-left px-3 py-2.5"
+                    >
                       <p className={`text-sm font-medium truncate ${currentSessionId === session.id ? 'text-blue-700 dark:text-blue-300' : 'text-gray-800 dark:text-gray-200'}`}>
                         {session.title}
                       </p>
@@ -301,15 +346,16 @@ export const Sidebar = () => {
                           {session.ruleContext.title?.slice(0, 20)}
                         </span>
                       )}
-                    </div>
+                    </button>
                     <button
                       onClick={(e) => deleteSession(session.id, e)}
-                      className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                      aria-label="Hapus"
+                      className="m-2 p-1.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                      aria-label="Hapus percakapan"
+                      title="Hapus percakapan"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
-                  </button>
+                  </div>
                 ))
               )}
             </div>

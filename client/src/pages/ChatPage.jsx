@@ -10,6 +10,7 @@ const ChatPage = () => {
   const ruleId = searchParams.get('rule_id');
   const ruleCode = searchParams.get('rule_code');
   const ruleTitle = searchParams.get('title');
+  const sessionParam = searchParams.get('session');
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -20,6 +21,7 @@ const ChatPage = () => {
   const SESSIONS_KEY = 'lex_chat_sessions';
 
   const [sessions, setSessions] = useState([]);
+  const [sessionsLoaded, setSessionsLoaded] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState(null);
 
   const quickPrompts = ruleTitle ? [
@@ -34,27 +36,67 @@ const ChatPage = () => {
     'Jelaskan hak-hak masyarakat adat berdasarkan UU Lingkungan Hidup.'
   ];
 
-  useEffect(() => {
+  const readSessions = () => {
     try {
       const saved = localStorage.getItem(SESSIONS_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
           setSessions(parsed);
+          return parsed;
         }
       }
     } catch (e) {
       console.error('Gagal memuat sesi chat:', e);
     }
+    return [];
+  };
+
+  useEffect(() => {
+    readSessions();
+    setSessionsLoaded(true);
   }, []);
 
   useEffect(() => {
+    const syncSessions = (event) => {
+      if (event?.detail?.source === 'chat') return;
+      readSessions();
+      if (event?.detail?.deletedId) {
+        setCurrentSessionId(prev => {
+          if (prev === event.detail.deletedId) {
+            setMessages([]);
+            return null;
+          }
+          return prev;
+        });
+      }
+    };
+    window.addEventListener('storage', syncSessions);
+    window.addEventListener('lex-chat-sessions-updated', syncSessions);
+    return () => {
+      window.removeEventListener('storage', syncSessions);
+      window.removeEventListener('lex-chat-sessions-updated', syncSessions);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!sessionsLoaded) return;
     try {
       localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+      window.dispatchEvent(new CustomEvent('lex-chat-sessions-updated', { detail: { source: 'chat' } }));
     } catch (e) {
       console.error('Gagal menyimpan sesi chat:', e);
     }
-  }, [sessions]);
+  }, [sessions, sessionsLoaded]);
+
+  useEffect(() => {
+    if (!sessionParam || sessions.length === 0 || currentSessionId === sessionParam) return;
+    const session = sessions.find(s => s.id === sessionParam);
+    if (session) {
+      setCurrentSessionId(session.id);
+      setMessages(session.messages || []);
+    }
+  }, [sessionParam, sessions, currentSessionId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -86,10 +128,13 @@ const ChatPage = () => {
     setMessages(session.messages || []);
     if (session.ruleContext) {
       const params = new URLSearchParams();
+      params.set('session', session.id);
       if (session.ruleContext.rule_id) params.set('rule_id', session.ruleContext.rule_id);
       if (session.ruleContext.rule_code) params.set('rule_code', session.ruleContext.rule_code);
       if (session.ruleContext.title) params.set('title', session.ruleContext.title);
       navigate(`/chat?${params.toString()}`, { replace: true });
+    } else {
+      navigate(`/chat?session=${session.id}`, { replace: true });
     }
   };
 
