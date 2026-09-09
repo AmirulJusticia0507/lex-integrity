@@ -10,8 +10,13 @@ const RANGES = [
   { value: '1y',  label: '1 Tahun' },
 ];
 
-const StatCard = ({ title, value, icon: Icon, color, accent }) => (
-  <div className={`relative overflow-hidden rounded-xl p-5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow`}>
+const StatCard = ({ title, value, icon: Icon, color, accent, onRefresh }) => (
+  <button
+    type="button"
+    onClick={onRefresh}
+    className="relative w-full overflow-hidden rounded-xl p-5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
+    title="Refresh live data"
+  >
     <div className={`absolute top-0 right-0 w-20 h-20 rounded-bl-[4rem] ${accent} opacity-10`} />
     <div className="flex items-start justify-between">
       <div>
@@ -26,7 +31,7 @@ const StatCard = ({ title, value, icon: Icon, color, accent }) => (
       <ArrowUpRight className="h-3 w-3" />
       <span>Live data</span>
     </div>
-  </div>
+  </button>
 );
 
 /* Wrapper dengan isolation agar Recharts tidak tembus z-index lain */
@@ -86,7 +91,7 @@ const Analytics = () => {
       {/* ── Baris 1: 4 Stat cards ─────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statsCards.map((card, i) => (
-          <StatCard key={i} {...card} />
+          <StatCard key={i} {...card} onRefresh={() => fetchAnalytics(timeRange)} />
         ))}
       </div>
 
