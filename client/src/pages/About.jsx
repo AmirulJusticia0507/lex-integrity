@@ -7,11 +7,11 @@ const About = () => {
     { icon: Scale, title: 'React 18 + Tailwind CSS', desc: 'Frontend SPA dengan CRA (react-scripts 5), styling utility-first Tailwind CSS.' },
     { icon: Database, title: 'Node.js + Express', desc: 'Backend REST API dengan Express, Sequelize ORM, dan Redis untuk antrian & cache.' },
     { icon: Shield, title: 'PostgreSQL', desc: 'Database relasional menyimpan peraturan, hasil analisis, dan metadata scraping.' },
-    { icon: Brain, title: 'Ollama (Local LLM)', desc: 'Model bahasa lokal (default deepseek-r1:14b) untuk chat dan analisis kontradiksi, 100% offline.' },
-    { icon: FileText, title: 'Scraper Python/Node', desc: 'Skrip scraping JDIH Sleman, JDIH Nasional, DPR & DPRD untuk mengambil dokumen peraturan.' },
+    { icon: Brain, title: 'Gemini + Ollama', desc: 'Provider AI fleksibel: Gemini untuk production, Ollama local untuk agent Lex Integrity.' },
+    { icon: FileText, title: 'Scraper Python/Node', desc: 'Scraper JDIH Sleman, JDIH DIY/Jogja, KPU, JDIHN, DPR, dan DPRD.' },
     { icon: Key, title: 'JWT + Role-Based Auth', desc: 'Proteksi endpoint sensitif, guard admin, sinkronisasi SSO Google ke akun lokal.' },
-    { icon: Zap, title: 'Node-Cron Scheduler', desc: 'Penjadwalan otomatis scraping harian/mingguan/bulanan & backup database terjadwal.' },
-    { icon: Save, title: 'Backup & Restore Otomatis', desc: 'Backup JSON terjadwal (harian/mingguan/bulanan) dengan retensi 90 hari.' },
+    { icon: Zap, title: 'Node-Cron Scheduler', desc: 'Penjadwalan scraping dan backup dinamis dari UI Data Management.' },
+    { icon: Save, title: 'Backup & Restore Otomatis', desc: 'Backup JSON manual dan terjadwal dengan cron, toggle aktif, dan retensi yang bisa diubah.' },
     { icon: GitBranch, title: 'Halaman Utama', desc: 'Dashboard, Explorer, Legal Matrix, Analytics, Data Management, Chat AI, Compliance.' }
   ];
 
@@ -20,12 +20,12 @@ const About = () => {
     { icon: AlertTriangle, title: 'Deteksi Loopholes', desc: 'Identifikasi pasal karet dan celah hukum pada setiap dokumen.' },
     { icon: Brain, title: 'Analisis Kontradiksi', desc: 'AI membandingkan peraturan terkait untuk menemukan inkonsistensi.' },
     { icon: BarChart2, title: 'Legal Matrix', desc: 'Matriks konflik antar peraturan per era dan kategori.' },
-    { icon: Bot, title: 'Chat AI', desc: 'Tanya AI tentang peraturan tertentu, percakapan tersimpan per hari.' },
-    { icon: Cloud, title: 'Scraping Terjadwal', desc: 'Node-cron otomatis (harian/mingguan/bulanan) untuk JDIH Jogja & Sleman.' },
+    { icon: Bot, title: 'Chat AI', desc: 'Tanya AI tentang peraturan tertentu, lanjutkan sesi riwayat, hapus chat, dan lihat progress saat AI berpikir.' },
+    { icon: Cloud, title: 'Scraping Multi-Sumber', desc: 'Scraping manual dan terjadwal untuk JDIH Jogja, Sleman, KPU, dan sumber queue lain.' },
     { icon: Lock, title: 'Login Google SSO', desc: 'OAuth2/OIDC via Keycloak (sso.jogjaprov.go.id) + sinkronisasi akun lokal.' },
-    { icon: Save, title: 'Backup & Restore', desc: 'Backup JSON terjadwal (harian/mingguan/bulanan) + manual via UI, retensi 90 hari.' },
-    { icon: Key, title: 'Keamanan JWT', desc: 'Proteksi endpoint sensitif (23 route), guard admin, interceptor token global.' },
-    { icon: RefreshCw, title: 'Loading Spinner Bermerek', desc: 'LoadingScreen terpusat saat login→dashboard & refresh halaman terproteksi.' },
+    { icon: Save, title: 'Backup Dinamis', desc: 'Jadwal backup bisa diedit dari UI: cron, status aktif, dan retensi.' },
+    { icon: Key, title: 'Keamanan JWT', desc: 'Proteksi endpoint sensitif, guard admin/superadmin, role permission, dan interceptor token global.' },
+    { icon: RefreshCw, title: 'Loading Spinner Bermerek', desc: 'LoadingScreen terpusat saat login ke dashboard, logout, dan refresh halaman terproteksi.' },
     { icon: UserCheck, title: 'Kartu Peraturan Modern', desc: 'UI card hover-lift, aksen gradasi kategori, badge soft, tombol aksi jelas.' },
     { icon: Zap, title: 'Grafik Lebar Penuh', desc: 'Grafik era full-width, pie chart dengan legenda rapi horizontal wrap.' }
   ];
@@ -58,7 +58,7 @@ const About = () => {
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
           Lex-Integrity adalah platform analisis kepatuhan regulasi berbasis AI untuk produk hukum
           Indonesia. Sistem ini menggabungkan <b>scraping otomatis</b> dari berbagai sumber JDIH,
-          <b> database terpusat</b> dengan PostgreSQL, serta <b> model bahasa lokal (LLM)</b> untuk
+          <b> database terpusat</b> dengan PostgreSQL, serta <b> provider AI Gemini/Ollama</b> untuk
           menganalisis kontradiksi antar peraturan dan menjawab pertanyaan seputar dokumen hukum.
         </p>
       </div>
@@ -97,8 +97,9 @@ const About = () => {
         <div className="flex items-start gap-3">
           <Cpu className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            Semua pemrosesan AI berjalan <b>100% lokal dan offline</b> menggunakan Ollama —
-            tidak ada data yang dikirim ke server pihak ketiga.
+            AI dapat berjalan memakai <b>Gemini API untuk production</b> atau <b>Ollama local</b>
+            untuk pengembangan dan agent Lex Integrity. Mode local tetap tersedia saat endpoint
+            Ollama diekspos ke backend.
           </p>
         </div>
       </div>
@@ -109,7 +110,7 @@ const About = () => {
           Hak cipta dilindungi.
         </p>
         <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">
-          Dibangun dengan AI-LLM terintegrasi — Ollama (Local LLM).
+          Dibangun dengan AI-LLM terintegrasi: Gemini API dan Ollama Local LLM.
         </p>
         <p className="text-xs mt-2">
           <Link to="/privacy" className="text-blue-600 hover:underline dark:text-blue-400">
