@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "concurrently \"cd server && npm run dev\" \"cd client && npm start\"",
     "dev:ai": "concurrently -n server,client,ollama,ngrok -c blue,green,magenta,cyan \"cd server && npm run dev\" \"cd client && npm start\" \"set OLLAMA_HOST=0.0.0.0:11434&& set OLLAMA_ORIGINS=*&& ollama serve\" \"ngrok http 11434\"",
+    "sync:ollama": "node scripts/syncOllamaTunnel.mjs",
     "postinstall": "npm install --prefix server --omit=dev",
     "start": "npm start --prefix server",
     "build": "cd client && npm install --legacy-peer-deps && npm run build",
