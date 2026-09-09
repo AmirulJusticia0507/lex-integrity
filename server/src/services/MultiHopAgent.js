@@ -16,13 +16,20 @@ import { createOllamaClient } from '../config/ollama.js';
 
 const ollama = createOllamaClient();
 
-const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_DATABASE || 'lex_integrity',
-  password: process.env.DB_PASSWORD || 'admin123',
-  port: parseInt(process.env.DB_PORT) || 5432,
-});
+const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_PRIVATE_URL || process.env.DATABASE_PUBLIC_URL;
+
+const pool = databaseUrl
+  ? new Pool({
+      connectionString: databaseUrl,
+      ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
+    })
+  : new Pool({
+      user: process.env.DB_USER || 'postgres',
+      host: process.env.DB_HOST || 'localhost',
+      database: process.env.DB_DATABASE || 'lex_integrity',
+      password: process.env.DB_PASSWORD || 'admin123',
+      port: parseInt(process.env.DB_PORT) || 5432,
+    });
 
 const EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL || 'nomic-embed-text';
 const AGENT_MODEL = process.env.OLLAMA_AGENT_MODEL || 'lex-integrity-agent:latest';

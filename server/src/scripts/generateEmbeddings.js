@@ -5,28 +5,36 @@
  */
 
 import { Pool } from 'pg';
-import { Ollama } from 'ollama';
 import { chunkLegalDocument, chunkByPasal, enrichChunkWithReferences } from '../utils/chunking.js';
+import { createOllamaClient } from '../config/ollama.js';
 import 'dotenv/config';
 
-const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_DATABASE || 'lex_integrity',
-  password: process.env.DB_PASSWORD || 'admin123',
-  port: parseInt(process.env.DB_PORT) || 5432,
-});
+const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_PRIVATE_URL || process.env.DATABASE_PUBLIC_URL;
 
-const ollama = new Ollama({
-  host: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-});
+const pool = databaseUrl
+  ? new Pool({
+      connectionString: databaseUrl,
+      ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
+    })
+  : new Pool({
+      user: process.env.DB_USER || 'postgres',
+      host: process.env.DB_HOST || 'localhost',
+      database: process.env.DB_DATABASE || 'lex_integrity',
+      password: process.env.DB_PASSWORD || 'admin123',
+      port: parseInt(process.env.DB_PORT) || 5432,
+    });
+
+const ollama = createOllamaClient();
 
 const EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL || 'nomic-embed-text';
 const BATCH_SIZE = parseInt(process.env.BATCH_SIZE) || 50;
+const MAX_RULES = parseInt(process.env.MAX_RULES) || 0;
 const CHUNK_MAX_SIZE = parseInt(process.env.CHUNK_MAX_SIZE) || 1200;
 const CHUNK_STRATEGY = process.env.CHUNK_STRATEGY || 'pasal'; // 'pasal' | 'semantic'
 
 async function ensureEmbeddingColumn() {
+  await pool.query('CREATE EXTENSION IF NOT EXISTS vector');
+
   const { rows } = await pool.query(`
     SELECT column_name FROM information_schema.columns
     WHERE table_name='rules' AND column_name='embedding'
@@ -35,14 +43,32 @@ async function ensureEmbeddingColumn() {
   if (rows.length === 0) {
     console.log('Adding embedding column to rules table...');
     await pool.query('ALTER TABLE rules ADD COLUMN embedding vector(768)');
-    await pool.query('CREATE EXTENSION IF NOT EXISTS vector');
-    await pool.query(`
-      CREATE INDEX IF NOT EXISTS rules_embedding_idx 
-      ON rules USING hnsw (embedding vector_cosine_ops)
-      WITH (m = 16, ef_construction = 64)
-    `);
+    try {
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS rules_embedding_idx 
+        ON rules USING hnsw (embedding vector_cosine_ops)
+        WITH (m = 16, ef_construction = 64)
+      `);
+    } catch (error) {
+      console.warn(`Vector index skipped: ${error.message}`);
+    }
     console.log('Embedding column and index created');
   }
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS rule_chunks (
+      id SERIAL PRIMARY KEY,
+      rule_code VARCHAR(100) NOT NULL REFERENCES rules(rule_code) ON DELETE CASCADE,
+      chunk_text TEXT NOT NULL,
+      chunk_metadata JSONB DEFAULT '{}'::jsonb,
+      embedding vector(768),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(rule_code, chunk_text)
+    )
+  `);
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_rule_chunks_rule_code ON rule_chunks(rule_code)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_rule_chunks_metadata ON rule_chunks USING GIN (chunk_metadata)');
 }
 
 async function getRulesWithoutEmbedding(limit) {
@@ -126,6 +152,7 @@ async function main() {
   console.log('Starting embedding generation...');
   console.log(`Model: ${EMBED_MODEL}`);
   console.log(`Batch size: ${BATCH_SIZE}`);
+  console.log(`Max rules: ${MAX_RULES || 'all'}`);
   console.log(`Chunk strategy: ${CHUNK_STRATEGY}`);
   console.log(`Max chunk size: ${CHUNK_MAX_SIZE}`);
   
@@ -135,7 +162,10 @@ async function main() {
   let totalChunks = 0;
   
   while (true) {
-    const rules = await getRulesWithoutEmbedding(BATCH_SIZE);
+    const remaining = MAX_RULES ? MAX_RULES - totalProcessed : BATCH_SIZE;
+    if (remaining <= 0) break;
+
+    const rules = await getRulesWithoutEmbedding(Math.min(BATCH_SIZE, remaining));
     if (rules.length === 0) break;
     
     console.log(`\nProcessing batch of ${rules.length} rules...`);
@@ -147,8 +177,6 @@ async function main() {
         const chunkResults = await processRule(rule);
         const saved = await saveChunks(chunkResults);
         totalChunks += saved;
-        totalProcessed++;
-        
         // Also update the main rule with a representative embedding (first chunk)
         if (chunkResults.length > 0) {
           await pool.query(
@@ -160,6 +188,8 @@ async function main() {
         console.log(`    → ${saved} chunks saved`);
       } catch (err) {
         console.error(`  Failed: ${rule.rule_code}`, err.message);
+      } finally {
+        totalProcessed++;
       }
     }
   }
