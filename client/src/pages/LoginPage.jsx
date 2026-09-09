@@ -5,6 +5,7 @@ import CapCaptcha from '../components/auth/CapCaptcha';
 import { useAuth } from '../components/auth/AuthContext';
 import { goGoogleLogin, handleGoogleCallback } from '../components/auth/googleAuth';
 import { apiUrl } from '../utils/http';
+import Swal from 'sweetalert2';
 
 const GoogleIcon = () => (
   <svg className="h-4 w-4" viewBox="0 0 48 48">
@@ -29,6 +30,23 @@ const LoginPage = () => {
   const [error, setError] = useState(null);
   const googleHandled = useRef(false);
 
+  const goToDashboard = () => {
+    Swal.fire({
+      title: 'Menyiapkan dashboard...',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
+      color: document.documentElement.classList.contains('dark') ? '#f9fafb' : '#111827',
+      didOpen: () => Swal.showLoading(),
+    });
+
+    setTimeout(() => {
+      Swal.close();
+      navigate('/');
+    }, 550);
+  };
+
   useEffect(() => {
     const code = searchParams.get('code');
     if (!code || googleHandled.current) return;
@@ -40,7 +58,7 @@ const LoginPage = () => {
         const result = await handleGoogleCallback(code);
         if (result.status === 'success') {
           setAuth(result.token, result.user);
-          navigate('/');
+          goToDashboard();
           return;
         }
         if (result.status === 'exists') {
@@ -75,7 +93,7 @@ const LoginPage = () => {
       const data = await response.json();
       if (response.ok && data.success) {
         setAuth(data.data.token, data.data.user);
-        navigate('/');
+        goToDashboard();
       } else {
         setError(data.error || 'Login gagal');
       }

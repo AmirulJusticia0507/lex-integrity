@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FileText, AlertTriangle, TrendingUp, Users, BarChart2, Search, Grid, Database, Settings, Info, Moon, Sun, UserCircle, ChevronDown, LogIn, KeyRound, ShieldCheck, LogOut, ChevronLeft, ChevronRight, Menu, MessageSquare, Plus, Trash2, Clock, ScrollText, Brain, X } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
+import Swal from 'sweetalert2';
 
 export const Sidebar = () => {
   const location = useLocation();
@@ -24,9 +25,37 @@ export const Sidebar = () => {
 
   const SESSIONS_KEY = 'lex_chat_sessions';
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const result = await Swal.fire({
+      title: 'Keluar dari akun?',
+      text: 'Sesi aktif akan ditutup dari browser ini.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, logout',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#2563eb',
+      cancelButtonColor: '#6b7280',
+      background: dark ? '#1f2937' : '#ffffff',
+      color: dark ? '#f9fafb' : '#111827',
+    });
+
+    if (!result.isConfirmed) return;
+
+    Swal.fire({
+      title: 'Mengalihkan ke login...',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      background: dark ? '#1f2937' : '#ffffff',
+      color: dark ? '#f9fafb' : '#111827',
+      didOpen: () => Swal.showLoading(),
+    });
+
     clearAuth();
-    navigate('/login', { replace: true });
+    setTimeout(() => {
+      Swal.close();
+      navigate('/login', { replace: true });
+    }, 450);
   };
 
   useEffect(() => {

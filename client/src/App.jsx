@@ -22,7 +22,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import LoginPage from './pages/LoginPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import { Sidebar, PageWrapper, MobileTopBar } from './components/layout';
+import { Sidebar, PageWrapper, MobileTopBar, RouteLoadingOverlay } from './components/layout';
 import { AuthProvider, RequireAuth } from './components/auth/AuthContext';
 import { Analytics as VercelAnalytics } from '@vercel/analytics/react';
 import './utils/http';
@@ -215,6 +215,7 @@ function App() {
         <AnalyticsProvider>
           <AuthProvider>
             <AnimatedRoutes />
+            <RouteLoadingOverlay />
             <Toaster position="top-right" />
             <VercelAnalytics />
           </AuthProvider>
