@@ -17,6 +17,7 @@ import CacheService from '../services/CacheService.js';
 import BackupService from '../services/BackupService.js';
 import ScheduleService from '../services/ScheduleService.js';
 import CrawlerService from '../services/CrawlerService.js';
+import { getBullRedisConfig } from '../config/redis.js';
 import { buildHierarchy } from '../utils/hierarchy.js';
 import { analyzeRegulatoryCompliance, getAgentStatus, analyzeMultiHopCompliance } from '../controllers/aiController.js';
 
@@ -459,14 +460,23 @@ router.post('/chat', authenticateToken, async (req, res) => {
       : message;
     chatMessages.push({ role: 'user', content: userPrompt });
 
-    const completion = await ollama.chat({
-      model: modelName,
-      messages: chatMessages,
-      options: {
-        temperature: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.2,
-        num_ctx: 4096
-      }
-    });
+    let completion;
+    try {
+      completion = await ollama.chat({
+        model: modelName,
+        messages: chatMessages,
+        options: {
+          temperature: parseFloat(process.env.OLLAMA_TEMPERATURE) || 0.2,
+          num_ctx: 4096
+        }
+      });
+    } catch (ollamaError) {
+      return res.status(503).json({
+        success: false,
+        error: 'Ollama / Lex Integrity Agent belum tersedia dari server backend.',
+        details: process.env.NODE_ENV === 'development' ? ollamaError.message : undefined
+      });
+    }
 
     let rawContent = completion.message?.content || '';
 
@@ -857,11 +867,7 @@ router.get('/queue/stats', authenticateToken, async (req, res) => {
   try {
 
     const queue = new Bull('rule processing', {
-      redis: {
-        port: parseInt(process.env.REDIS_PORT) || 6379,
-        host: process.env.REDIS_HOST || 'localhost',
-        password: process.env.REDIS_PASSWORD || undefined
-      }
+      redis: getBullRedisConfig()
     });
 
     const [waiting, active, completed, failed] = await Promise.all([

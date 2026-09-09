@@ -4,6 +4,7 @@ import Bull from 'bull';
 import { createClient } from 'redis';
 import Rule from './models/Rule.js';
 import { Ollama } from 'ollama';
+import { getBullRedisConfig } from './config/redis.js';
 
 const redis = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
 
@@ -13,7 +14,7 @@ const ollama = new Ollama({
 
 // Queue untuk pemrosesan aturan
 const ruleProcessingQueue = new Bull('rule processing', {
-  redis: { port: 6379, host: 'localhost', password: process.env.REDIS_PASSWORD || undefined }
+  redis: getBullRedisConfig()
 });
 
 // Worker untuk memproses tugas

@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { getBullRedisConfig } from './config/redis.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -141,11 +142,7 @@ app.get('/health', async (req, res) => {
   try {
     const Bull = (await import('bull')).default;
     const queue = new Bull('rule processing', {
-      redis: {
-        port: parseInt(process.env.REDIS_PORT) || 6379,
-        host: process.env.REDIS_HOST || 'localhost',
-        password: process.env.REDIS_PASSWORD || undefined
-      }
+      redis: getBullRedisConfig()
     });
     const [waiting, active, completed, failed] = await Promise.all([
       queue.getWaitingCount(),

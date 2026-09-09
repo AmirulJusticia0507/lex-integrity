@@ -2,15 +2,12 @@ import Rule from '../models/Rule.js';
 import redis from 'redis';
 import Bull from 'bull';
 import scrapeLock from '../utils/scrapeLock.js';
+import { getBullRedisConfig } from '../config/redis.js';
 
 class CrawlerService {
   constructor() {
     this.queue = new Bull('rule processing', {
-      redis: {
-        port: parseInt(process.env.REDIS_PORT) || 6379,
-        host: process.env.REDIS_HOST || '127.0.0.1',
-        password: process.env.REDIS_PASSWORD || undefined
-      },
+      redis: getBullRedisConfig(),
       // Hindari request menunggu koneksi siap yang memakan waktu
       enableReadyCheck: false,
       maxRetriesPerRequest: null
@@ -116,4 +113,4 @@ class CrawlerService {
   }
 }
 
-export default new CrawlerService();
+export default new CrawlerService();
