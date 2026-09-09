@@ -4,6 +4,7 @@
   "description": "Local AI Policy & Regulatory Compliance Matrix",
   "scripts": {
     "dev": "concurrently \"cd server && npm run dev\" \"cd client && npm start\"",
+    "postinstall": "npm install --prefix server --omit=dev",
     "start": "npm start --prefix server",
     "build": "cd client && npm install --legacy-peer-deps && npm run build",
     "test": "cd server && npm run test && cd client && npm test",
