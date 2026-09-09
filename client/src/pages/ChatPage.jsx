@@ -15,6 +15,7 @@ const ChatPage = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [thinkingProgress, setThinkingProgress] = useState(0);
   const [activeModel, setActiveModel] = useState('lex-integrity-agent:latest');
   const messagesEndRef = useRef(null);
 
@@ -101,6 +102,25 @@ const ChatPage = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setThinkingProgress(0);
+      return undefined;
+    }
+
+    setThinkingProgress(8);
+    const startedAt = Date.now();
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const estimated = elapsed < 12000
+        ? 8 + (elapsed / 12000) * 62
+        : 70 + Math.min((elapsed - 12000) / 48000, 1) * 25;
+      setThinkingProgress(Math.min(95, Math.round(estimated)));
+    }, 450);
+
+    return () => clearInterval(timer);
+  }, [isLoading]);
 
   const createNewSession = (initialMessages = [], ruleContext = null) => {
     const now = new Date().toISOString();
@@ -219,6 +239,7 @@ const ChatPage = () => {
         updateSession(sessionToUpdate, { messages: updatedMessages });
       }
     } finally {
+      setThinkingProgress(100);
       setIsLoading(false);
     }
   };
@@ -345,12 +366,16 @@ const ChatPage = () => {
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white flex-shrink-0 shadow-sm">
                   <Bot className="h-5 w-5 animate-pulse" />
                 </div>
-                <div className="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-tl-none px-5 py-4 border border-gray-200/60 dark:border-gray-600/60 flex items-center gap-3">
-                  <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Lex Integrity Agent sedang berpikir…</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                    <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                    <span className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                <div className="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-tl-none px-5 py-4 border border-gray-200/60 dark:border-gray-600/60 w-full max-w-md">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Lex Integrity Agent sedang berpikir...</span>
+                    <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 tabular-nums">{thinkingProgress}%</span>
+                  </div>
+                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600">
+                    <div
+                      className="h-full rounded-full bg-blue-600 transition-all duration-500 ease-out"
+                      style={{ width: `${thinkingProgress}%` }}
+                    />
                   </div>
                 </div>
               </div>
@@ -390,3 +415,4 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
+
