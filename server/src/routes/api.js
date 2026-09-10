@@ -126,19 +126,36 @@ const DEFAULT_ROLES = {
 // GET /api/rules - Get all rules with pagination and filters
 router.get('/rules', async (req, res) => {
   try {
-    const { search, regime, category, limit = 20, page = 1 } = req.query;
+    const { search, regime, category, number, year, limit = 20, page = 1 } = req.query;
     
     // Build where clause
     const where = {};
+    const andFilters = [];
     if (search) {
-      where[Op.or] = [
+      andFilters.push({ [Op.or]: [
         { title: { [Op.iLike]: `%${search}%` } },
         { content: { [Op.iLike]: `%${search}%` } },
         { rule_code: { [Op.iLike]: `%${search}%` } }
-      ];
+      ] });
     }
     if (regime) where.regime = regime;
     if (category) where.category = category;
+    if (number) {
+      andFilters.push({ [Op.or]: [
+        { rule_code: { [Op.iLike]: `%${number}%` } },
+        { title: { [Op.iLike]: `%Nomor%${number}%` } },
+        { content: { [Op.iLike]: `%Nomor%${number}%` } }
+      ] });
+    }
+    if (year) {
+      andFilters.push({ [Op.or]: [
+        { publish_date: { [Op.gte]: `${year}-01-01`, [Op.lte]: `${year}-12-31` } },
+        { rule_code: { [Op.iLike]: `%${year}%` } },
+        { title: { [Op.iLike]: `%${year}%` } },
+        { content: { [Op.iLike]: `%${year}%` } }
+      ] });
+    }
+    if (andFilters.length > 0) where[Op.and] = andFilters;
     if (req.query.is_active !== undefined) where.is_active = req.query.is_active === 'true';
     
     // Pagination
