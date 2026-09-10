@@ -1241,26 +1241,18 @@ router.post('/auth/login', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Username atau password salah' });
     }
 
-    // Semua role wajib verifikasi OTP WhatsApp terlebih dahulu (kebijakan keamanan)
-    const hasPhone = !!user.phone && String(user.phone).replace(/\D/g, '').length >= 8;
-    const tempToken = jwt.sign(
-      { id: user.id, username: user.username, role: user.role, temp: true, purpose: 'otp' },
-      process.env.JWT_SECRET || 'your_jwt_secret_here_change_this_in_production',
-      { expiresIn: Math.ceil(OTP_TTL_MS / 1000) }
-    );
+    const token = generateToken({ id: user.id, username: user.username, role: user.role });
+
     return res.json({
       success: true,
-      message: 'Verifikasi OTP diperlukan',
+      message: 'Login berhasil',
       data: {
-        requires_2fa: true,
-        requires_otp: true,
-        phone_required: !hasPhone,
-        masked_phone: hasPhone ? maskPhone(user.phone) : null,
-        temp_token: tempToken,
+        token,
         user: {
           id: user.id,
           username: user.username,
-          email: user.email
+          email: user.email,
+          role: user.role
         }
       }
     });
