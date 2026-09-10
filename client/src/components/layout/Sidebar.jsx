@@ -204,7 +204,7 @@ export const Sidebar = () => {
     { icon: BarChart2,label: 'Legal Matrix',     path: '/matrix' },
     { icon: Brain,    label: 'Compliance AI',    path: '/compliance' },
     { icon: TrendingUp,label:'Analytics',        path: '/analytics' },
-    { icon: Database, label: 'Dashboard',        path: '/dashboard' },
+    { icon: Database, label: 'Kesehatan Sistem',        path: '/dashboard' },
     { icon: Settings, label: 'Data Management',  path: '/data' }
   ];
   
