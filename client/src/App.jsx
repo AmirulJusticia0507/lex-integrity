@@ -20,6 +20,7 @@ import ChatPage from './pages/ChatPage';
 import ComplianceAnalysis from './pages/ComplianceAnalysis';
 import About from './pages/About';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import Help from './pages/Help';
 import LoginPage from './pages/LoginPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -29,7 +30,7 @@ import { Analytics as VercelAnalytics } from '@vercel/analytics/react';
 import './utils/http';
 import './index.css';
 
-const STANDALONE_PATHS = ['/login', '/forgot-password', '/reset-password', '/privacy'];
+const STANDALONE_PATHS = ['/login', '/forgot-password', '/reset-password', '/privacy', '/help'];
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -58,6 +59,7 @@ function AnimatedRoutes() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/help" element={<Help />} />
         </Routes>
       </AnimatePresence>
     );

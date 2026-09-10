@@ -116,6 +116,10 @@ const About = () => {
           <Link to="/privacy" className="text-blue-600 hover:underline dark:text-blue-400">
             Kebijakan Privasi &amp; Cookies
           </Link>
+          <span className="mx-2 text-gray-300 dark:text-gray-600">|</span>
+          <Link to="/help" className="text-blue-600 hover:underline dark:text-blue-400">
+            Bantuan
+          </Link>
         </p>
       </div>
     </div>

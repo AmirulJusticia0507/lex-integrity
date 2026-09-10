@@ -158,6 +158,11 @@ const LoginPage = () => {
           </Link>{' '}
           kami.
         </p>
+        <p className="text-xs text-blue-200">
+          <Link to="/help" className="underline font-medium hover:text-white transition-colors">
+            Bantuan
+          </Link>
+        </p>
       </div>
 
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6">
