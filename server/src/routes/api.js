@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
 import { exec, fork } from 'child_process';
 import Bull from 'bull';
 import * as cheerio from 'cheerio';
@@ -1301,7 +1302,7 @@ router.post('/auth/2fa/login', async (req, res) => {
   }
 });
 
-// POST /api/auth/otp/send - Kirim kode OTP ke WhatsApp user (via Wablas)
+// POST /api/auth/otp/send - Kirim kode OTP ke email jika SMTP tersedia, fallback WhatsApp/dev console
 router.post('/auth/otp/send', async (req, res) => {
   try {
     const { temp_token, phone } = req.body;
@@ -1320,25 +1321,29 @@ router.post('/auth/otp/send', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Pengguna tidak ditemukan' });
     }
 
-    // Jika nomor dikirim di body, set & simpan ke profil user
-    let normalizedPhone = user.phone
-      ? normalizePhone(user.phone)
-      : '';
-    if (phone !== undefined) {
-      normalizedPhone = normalizePhone(phone);
-      if (!normalizedPhone) {
-        return res.status(400).json({ success: false, error: 'Format nomor WhatsApp tidak valid (contoh: 081234567890)' });
-      }
-      user.phone = normalizedPhone;
-      await user.save();
-    }
+    const hasEmailOtp = canSendEmailOtp();
 
-    if (!normalizedPhone) {
-      return res.status(400).json({
-        success: false,
-        error: 'Nomor WhatsApp belum diatur. Silakan lengkapi nomor Anda.',
-        data: { requires_phone: true }
-      });
+    if (!hasEmailOtp) {
+      // Jika nomor dikirim di body, set & simpan ke profil user
+      let normalizedPhone = user.phone
+        ? normalizePhone(user.phone)
+        : '';
+      if (phone !== undefined) {
+        normalizedPhone = normalizePhone(phone);
+        if (!normalizedPhone) {
+          return res.status(400).json({ success: false, error: 'Format nomor WhatsApp tidak valid (contoh: 081234567890)' });
+        }
+        user.phone = normalizedPhone;
+        await user.save();
+      }
+
+      if (!normalizedPhone) {
+        return res.status(400).json({
+          success: false,
+          error: 'Nomor WhatsApp belum diatur. Silakan lengkapi nomor Anda.',
+          data: { requires_phone: true }
+        });
+      }
     }
 
     // Cooldown: 1 OTP per interval, jangan spam
@@ -1362,16 +1367,20 @@ router.post('/auth/otp/send', async (req, res) => {
     await user.save();
 
     const message = `Kode OTP Lex-Integrity Anda: ${code}. Berlaku ${Math.round(OTP_TTL_MS / 60000)} menit. Jangan bagikan kode ini kepada siapa pun.`;
-    const sendResult = await sendWablas(user.phone, message);
+    const sendResult = hasEmailOtp
+      ? await sendOtpEmail(user.email, code)
+      : await sendWablas(user.phone, message);
     if (!sendResult.ok) {
       return res.status(502).json({ success: false, error: `Gagal mengirim OTP: ${sendResult.error}` });
     }
 
     res.json({
       success: true,
-      message: 'Kode OTP terkirim ke WhatsApp',
+      message: hasEmailOtp ? 'Kode OTP terkirim ke email' : 'Kode OTP terkirim ke WhatsApp',
       data: {
-        masked_phone: maskPhone(user.phone),
+        delivery: hasEmailOtp ? 'email' : 'whatsapp',
+        masked_email: hasEmailOtp ? maskEmail(user.email) : null,
+        masked_phone: hasEmailOtp ? null : maskPhone(user.phone),
         dev_mode: !!sendResult.dev_mode,
         expires_in_seconds: Math.round(OTP_TTL_MS / 1000),
         resend_after_seconds: Math.round(OTP_RESEND_COOLDOWN_MS / 1000)
@@ -2010,6 +2019,7 @@ const WABLAS_BASE_URL = (process.env.WABLAS_BASE_URL || 'https://patroli.wablas.
 const OTP_TTL_MS = (parseInt(process.env.OTP_TTL_SECONDS, 10) || 300) * 1000;
 const OTP_RESEND_COOLDOWN_MS = (parseInt(process.env.OTP_RESEND_COOLDOWN_SECONDS, 10) || 30) * 1000;
 const OTP_MAX_ATTEMPTS = parseInt(process.env.OTP_MAX_ATTEMPTS, 10) || 5;
+const SMTP_FROM = process.env.SMTP_FROM || process.env.SMTP_USER || 'miruljungkel@gmail.com';
 
 function generateOtp() {
   return String(crypto.randomInt(0, 1000000)).padStart(6, '0');
@@ -2032,6 +2042,46 @@ function maskPhone(phone) {
   const p = normalizePhone(phone);
   if (p.length < 7) return '****';
   return `${p.slice(0, 3)}****${p.slice(-3)}`;
+}
+
+function maskEmail(email) {
+  const [name, domain] = String(email || '').split('@');
+  if (!name || !domain) return '****';
+  return `${name.slice(0, 2)}****@${domain}`;
+}
+
+function canSendEmailOtp() {
+  return Boolean(process.env.SMTP_USER && process.env.SMTP_PASS);
+}
+
+function createOtpMailer() {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT, 10) || 465,
+    secure: String(process.env.SMTP_SECURE || 'true') !== 'false',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+}
+
+async function sendOtpEmail(email, code) {
+  if (!canSendEmailOtp()) {
+    console.log(`[EMAIL-OTP-DEV] SMTP belum diatur - OTP untuk ${email}: ${code}`);
+    return { ok: true, dev_mode: true };
+  }
+  try {
+    await createOtpMailer().sendMail({
+      from: `Lex Integrity <${SMTP_FROM}>`,
+      to: email,
+      subject: 'Kode OTP Lex Integrity',
+      text: `Kode OTP Lex Integrity Anda: ${code}. Berlaku ${Math.round(OTP_TTL_MS / 60000)} menit. Jangan bagikan kode ini kepada siapa pun.`,
+    });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
 }
 
 async function sendWablas(phone, message) {
