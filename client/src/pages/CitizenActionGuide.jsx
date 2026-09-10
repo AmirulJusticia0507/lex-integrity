@@ -1,33 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, AlertTriangle, FileSearch, Megaphone, Gavel, Scale,
-  ShieldCheck, Users, Landmark, CheckCircle2, ExternalLink
+  AlertTriangle,
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  FileSearch,
+  Gavel,
+  Landmark,
+  Megaphone,
+  Scale,
+  ShieldCheck,
+  Users
 } from 'lucide-react';
 import { authFetch } from '../utils/http';
 import LoadingScreen from '../components/layout/LoadingScreen';
 
-// Institusi tujuan disesuaikan dengan jenjang peraturan
 function targetInstitution(category = '') {
   const c = category.toLowerCase();
-  if (/perda|pergub|perda\s*istimewa/.test(c)) {
+  if (/perda|pergub|perbup|perwal|perda\s*istimewa/.test(c)) {
     return {
-      ppid: 'PPID Provinsi/Kabupaten-Kota setempat',
-      uji: 'Mahkamah Agung (penguji materiil Perda terhadap peraturan yang lebih tinggi)',
-      aspirasi: 'DPRD daerah setempat'
+      ppid: 'PPID Provinsi/Kabupaten/Kota atau instansi penerbit',
+      uji: 'Mahkamah Agung untuk pengujian materiil peraturan di bawah undang-undang',
+      aspirasi: 'DPRD daerah setempat dan kepala daerah/instansi penerbit'
     };
   }
-  if (/permen|perpres|^pp\b|kepmen/.test(c)) {
+  if (/permen|perpres|^pp\b|kepmen|peraturan menteri/.test(c)) {
     return {
       ppid: 'PPID kementerian/lembaga penerbit aturan',
-      uji: 'Mahkamah Agung (penguji materiil peraturan di bawah undang-undang)',
-      aspirasi: 'Kementerian/lembaga terkait & DPR'
+      uji: 'Mahkamah Agung untuk pengujian materiil peraturan di bawah undang-undang',
+      aspirasi: 'Kementerian/lembaga terkait dan DPR RI'
     };
   }
   return {
-    ppid: 'PPID instansi penerbit (kementerian/lembaga/DPR)',
-    uji: 'Mahkamah Konstitusi (jika menguji UU terhadap UUD 1945) atau Mahkamah Agung',
-    aspirasi: 'DPR RI / DPD'
+    ppid: 'PPID instansi penerbit aturan',
+    uji: 'Mahkamah Konstitusi untuk UU terhadap UUD 1945, atau Mahkamah Agung untuk aturan di bawah UU',
+    aspirasi: 'DPR RI/DPD atau instansi penerbit aturan'
   };
 }
 
@@ -35,65 +45,123 @@ const ACTIONS = [
   {
     icon: FileSearch,
     color: 'from-sky-500 to-blue-600',
-    title: '1. Ajukan Permohonan Informasi Publik',
-    dasar: 'UU No. 14/2008 (KIP)',
-    desc: 'Jika dokumen resmi peraturan ini tidak ditemukan, badan publik WAJIB memberikannya saat diminta. Ini hak Anda.',
+    title: '1. Minta Dokumen Resmi',
+    dasar: 'UU No. 14/2008 tentang KIP',
+    desc: 'Jika dasar hukum, naskah akademik, atau dokumen resmi belum jelas, warga dapat meminta informasi ke badan publik.',
     getSteps: (t) => [
-      `Temukan PPID terdekat melalui ppid.go.id atau situs resmi ${t.ppid}.`,
-      'Ajukan permohonan secara online/tulis: sebutkan judul & nomor peraturan yang diminta.',
-      'Badan publik wajib menjawab maksimal 10 hari kerja (bisa diperpanjang 7 hari).',
-      'Jika ditolak/diam: ajukan sengketa ke Komisi Informasi (ki.go.id).'
+      `Ajukan permohonan informasi ke ${t.ppid}.`,
+      'Sebutkan nama/nomor aturan, dokumen yang diminta, dan alasan kebutuhan informasi.',
+      'Jika tidak dijawab atau ditolak, ajukan keberatan lalu sengketa ke Komisi Informasi.'
     ]
   },
   {
     icon: Megaphone,
     color: 'from-orange-500 to-amber-600',
-    title: '2. Sampaikan Aspirasi & Masukan',
-    dasar: 'UU No. 12/2011 (Pembentukan Peraturan)',
-    desc: 'Masyarakat berhak berpartisipasi dalam pembentukan dan perbaikan peraturan — termasuk mengusulkan perubahan/pencabutan.',
+    title: '2. Kirim Masukan Perbaikan',
+    dasar: 'UU No. 12/2011',
+    desc: 'Masyarakat berhak memberi masukan atas pembentukan, perubahan, atau evaluasi peraturan.',
     getSteps: (t) => [
-      `Kirim masukan tertulis ke ${t.aspirasi} melalui kanal resmi/surat.`,
-      'Buat atau dukung petisi daring sebagai tekanan publik yang terdokumentasi.',
-      'Manfaatkan momen rapat dengar pendapat (RDPU) — pendaftaran dibuka publik.'
-    ]
-  },
-  {
-    icon: Gavel,
-    color: 'from-purple-500 to-violet-600',
-    title: '3. Pengujian Peraturan',
-    dasar: 'UU No. 48/2009 & UU No. 24/2003',
-    desc: 'Jika isi peraturan dinilai bertentangan dengan peraturan lebih tinggi, dapat diajukan pengujian.',
-    getSteps: (t) => [
-      `Sasaran pengujian: ${t.uji}.`,
-      'Hanya pihak yang dirugikan langsung (legal standing) yang dapat mengajukan — gabungkan dengan warga lain/organisasi.',
-      'Butuh pendampingan advokat: gunakan jalur bantuan hukum (kartu 5).'
+      `Kirim masukan tertulis ke ${t.aspirasi}.`,
+      'Cantumkan pasal/ketentuan yang dianggap merugikan atau multitafsir.',
+      'Minta klarifikasi, revisi, pencabutan, atau pedoman pelaksanaan yang lebih jelas.'
     ]
   },
   {
     icon: ShieldCheck,
     color: 'from-red-500 to-rose-600',
-    title: '4. Lapor ke Ombudsman RI',
+    title: '3. Laporkan Dampak Layanan Publik',
     dasar: 'UU No. 37/2008',
-    desc: 'Apabila penyelenggaraan layanan publik berbasis aturan ini lambat, berbiaya ilegal, atau diskriminatif — itu maladministrasi.',
+    desc: 'Jika aturan dipakai untuk pelayanan yang lambat, diskriminatif, pungutan liar, atau penolakan tanpa alasan, laporkan sebagai dugaan maladministrasi.',
     getSteps: () => [
-      'Lapor via ombudsman.go.id, aplikasi Lapor!, datangi cabang Ombudsman terdekat.',
-      'Lampirkan bukti pengalaman (foto, surat, kronologi) — semakin spesifik semakin kuat.',
-      'Ombudsman dapat merekomendasikan perbaikan bahkan revisi aturan.'
+      'Laporkan melalui SP4N LAPOR! atau Ombudsman RI.',
+      'Lampirkan kronologi, tanggal kejadian, nama instansi, bukti surat, foto, atau tangkapan layar.',
+      'Simpan nomor tiket laporan untuk pemantauan dan eskalasi.'
+    ]
+  },
+  {
+    icon: Gavel,
+    color: 'from-purple-500 to-violet-600',
+    title: '4. Pertimbangkan Uji Materi',
+    dasar: 'UU No. 48/2009 dan UU No. 24/2003',
+    desc: 'Jika substansi aturan bertentangan dengan aturan yang lebih tinggi, warga/kelompok terdampak dapat menyiapkan jalur pengujian.',
+    getSteps: (t) => [
+      `Cek forum pengujian yang relevan: ${t.uji}.`,
+      'Kumpulkan bukti kerugian langsung atau potensi kerugian yang konkret.',
+      'Konsultasikan legal standing dan petitum dengan advokat atau lembaga bantuan hukum.'
     ]
   },
   {
     icon: Users,
     color: 'from-emerald-500 to-green-600',
-    title: '5. Advokasi Kolektif & Bantuan Hukum',
-    dasar: 'UU No. 16/2011 (Bantuan Hukum)',
-    desc: 'Isu satu orang mudah diabaikan; isu kolektif sulit diabaikan. Rangkul komunitas, akademisi, dan media.',
+    title: '5. Bangun Advokasi Kolektif',
+    dasar: 'UU No. 16/2011',
+    desc: 'Masalah regulasi sering lebih kuat jika disuarakan bersama warga terdampak, komunitas, akademisi, atau organisasi bantuan hukum.',
     getSteps: () => [
-      'Hubungi lembaga bantuan hukum (LBH) atau fakultas hukum universitas — banyak yang punya layanan konsultasi gratis.',
-      'Bangun dukungan komunitas terdampak, susun dokumen posisi bersama.',
-      'Libatkan media arus utama/peneliti agar isu mendapat perhatian publik.'
+      'Susun kronologi bersama dan kumpulkan pola kerugian dari beberapa warga.',
+      'Minta pendampingan LBH, klinik hukum kampus, atau organisasi masyarakat sipil.',
+      'Publikasikan temuan secara bertanggung jawab dengan data dan dokumen yang bisa diverifikasi.'
     ]
   }
 ];
+
+const OFFICIAL_CHANNELS = [
+  { label: 'SP4N LAPOR!', url: 'https://www.lapor.go.id/', note: 'aduan layanan publik lintas instansi' },
+  { label: 'Ombudsman RI', url: 'https://ombudsman.go.id/', note: 'maladministrasi layanan publik' },
+  { label: 'Komisi Informasi', url: 'https://komisiinformasi.go.id/', note: 'sengketa informasi publik' },
+  { label: 'Komnas HAM', url: 'https://www.komnasham.go.id/', note: 'indikasi pelanggaran hak asasi' },
+  { label: 'Bantuan Hukum BPHN', url: 'https://sidbankum.bphn.go.id/', note: 'mencari organisasi bantuan hukum' }
+];
+
+function resolveSource(rule) {
+  if (rule.source_url) return rule.source_url;
+  try {
+    const parsed = typeof rule.content === 'string' && rule.content.trim().startsWith('{')
+      ? JSON.parse(rule.content)
+      : null;
+    return parsed?.source_url || null;
+  } catch {
+    return null;
+  }
+}
+
+function makeDraft(rule, targets, loopholes, impacts) {
+  const issueLines = loopholes.length
+    ? loopholes.map((item, index) => `${index + 1}. ${item}`).join('\n')
+    : '1. [Tuliskan poin cacat, kontradiksi, atau pasal yang bermasalah]';
+  const impactLines = impacts.length
+    ? impacts.map((item, index) => `${index + 1}. ${item}`).join('\n')
+    : '1. [Tuliskan dampak nyata yang dialami warga]';
+
+  return `Perihal: Permohonan klarifikasi/evaluasi atas ${rule.title}
+
+Kepada Yth. ${targets.ppid} / instansi penerbit peraturan,
+
+Saya mengajukan permohonan klarifikasi dan evaluasi atas produk hukum berikut:
+Nama peraturan: ${rule.title}
+Kode/nomor: ${rule.rule_code || '-'}
+Kategori: ${rule.category || '-'}
+
+Poin yang perlu diklarifikasi:
+${issueLines}
+
+Dampak yang dirasakan/berpotensi dirasakan warga:
+${impactLines}
+
+Permohonan:
+1. Mohon diberikan dokumen resmi, dasar pertimbangan, atau naskah akademik terkait aturan tersebut.
+2. Mohon dilakukan klarifikasi atas ketentuan yang berpotensi menimbulkan ketidakpastian atau kerugian warga.
+3. Jika benar terdapat masalah, mohon dipertimbangkan revisi, pencabutan, atau pedoman pelaksanaan yang lebih jelas.
+
+Lampiran yang dapat disertakan:
+1. Tangkapan layar/dokumen aturan.
+2. Kronologi kejadian atau dampak yang dialami.
+3. Bukti surat, foto, kuitansi, atau komunikasi dengan instansi terkait.
+
+Hormat saya,
+[Nama]
+[Kontak]
+[Alamat domisili]`;
+}
 
 const CitizenActionGuide = () => {
   const { rule_code } = useParams();
@@ -101,6 +169,7 @@ const CitizenActionGuide = () => {
   const [rule, setRule] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,13 +201,18 @@ const CitizenActionGuide = () => {
     );
   }
 
-  const hasSource = Boolean(
-    rule.source_url ||
-    (typeof rule.content === 'string' && rule.content.trim().startsWith('{') &&
-      (() => { try { return JSON.parse(rule.content)?.source_url; } catch { return false; } })())
-  );
+  const sourceUrl = resolveSource(rule);
+  const hasSource = Boolean(sourceUrl || rule.pdf_url);
   const targets = targetInstitution(rule.category);
   const loopholes = Array.isArray(rule.loopholes) ? rule.loopholes : [];
+  const impacts = Array.isArray(rule.impacts) ? rule.impacts : [];
+  const draft = makeDraft(rule, targets, loopholes, impacts);
+
+  const copyDraft = async () => {
+    await navigator.clipboard.writeText(draft);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
+  };
 
   return (
     <div className="space-y-6">
@@ -150,18 +224,16 @@ const CitizenActionGuide = () => {
         Kembali ke Detail Peraturan
       </button>
 
-      {/* Header status */}
       <div className={`rounded-xl shadow-md p-6 border-l-4 ${
-        hasSource ? 'border-blue-500 bg-white dark:bg-gray-800 dark:border-blue-500'
-                  : 'border-yellow-500 bg-yellow-50 dark:bg-gray-800'
+        hasSource ? 'border-blue-500 bg-white dark:bg-gray-800' : 'border-yellow-500 bg-yellow-50 dark:bg-gray-800'
       }`}>
-        <div className="flex items-start gap-3">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start">
           <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
             hasSource ? 'bg-blue-100 dark:bg-blue-900/40' : 'bg-yellow-100 dark:bg-yellow-900/30'
           }`}>
             <Scale className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="text-lg font-bold text-gray-900 leading-snug dark:text-gray-100">{rule.title}</h1>
             <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
               <span className="px-2 py-0.5 rounded-full bg-gray-100 ring-1 ring-gray-200 font-mono dark:bg-gray-700 dark:ring-gray-600 dark:text-gray-300">
@@ -180,54 +252,119 @@ const CitizenActionGuide = () => {
                 </span>
               )}
             </div>
+            <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+              Panduan ini membantu warga mengubah temuan analisis menjadi langkah yang bisa dilakukan: minta dokumen,
+              kirim masukan, laporkan dampak layanan publik, atau cari bantuan hukum.
+            </p>
           </div>
-          {!hasSource && rule.pdf_url && (
+          {(sourceUrl || rule.pdf_url) && (
             <a
-              href={rule.pdf_url}
+              href={sourceUrl || rule.pdf_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-300 text-gray-700 hover:bg-white transition-colors shrink-0 dark:border-gray-600 dark:text-gray-200"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              Coba PDF terdaftar
+              Buka Sumber
             </a>
           )}
         </div>
-        {!hasSource && (
-          <p className="mt-3 text-sm text-yellow-800 dark:text-yellow-300">
-            Dokumen sumber tidak dapat diakses — jangan khawatir, sebagai warga Anda tetap punya
-            beberapa jalur resmi untuk memperoleh dokumen ini sekaligus memperbaiki aturannya:
-          </p>
-        )}
       </div>
 
-      {/* Poin dari analisis */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <section className="bg-white rounded-xl shadow-md p-5 dark:bg-gray-800">
+          <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-3 dark:text-gray-100">
+            <Scale className="h-5 w-5 text-blue-500" />
+            Dampak ke Warga
+          </h2>
+          {impacts.length > 0 ? (
+            <ul className="space-y-2">
+              {impacts.map((impact, i) => (
+                <li key={i} className="text-sm text-gray-700 dark:text-gray-300">{impact}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Dampak belum tersimpan. Isi bagian dampak pada draft sesuai pengalaman warga yang terdampak.
+            </p>
+          )}
+        </section>
+
+        <section className="bg-white rounded-xl shadow-md p-5 lg:col-span-2 dark:bg-gray-800">
+          <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-3 dark:text-gray-100">
+            <Landmark className="h-5 w-5 text-emerald-600" />
+            Kanal Tindak Lanjut
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {OFFICIAL_CHANNELS.map((channel) => (
+              <a
+                key={channel.url}
+                href={channel.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group rounded-lg border border-gray-200 p-3 hover:border-blue-300 hover:bg-blue-50 transition-colors dark:border-gray-700 dark:hover:border-blue-700 dark:hover:bg-blue-900/20"
+              >
+                <span className="flex items-center justify-between gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  {channel.label}
+                  <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
+                </span>
+                <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">{channel.note}</span>
+              </a>
+            ))}
+          </div>
+        </section>
+      </div>
+
       {loopholes.length > 0 && (
-        <div className="rounded-xl shadow-md p-6 bg-white dark:bg-gray-800">
+        <section className="rounded-xl shadow-md p-6 bg-white dark:bg-gray-800">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3 dark:text-gray-100">
             <AlertTriangle className="h-5 w-5 text-yellow-500" />
-            Poin Kuat dari Analisis (untuk disampaikan)
+            Poin Analisis untuk Disampaikan
           </h2>
           <ul className="space-y-2">
-            {loopholes.map((l, i) => (
+            {loopholes.map((loophole, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
                 <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-yellow-500 shrink-0" />
-                {l}
+                {loophole}
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-            Kutip poin-poin ini saat menulis permohonan, masukan, atau laporan Anda.
-          </p>
-        </div>
+        </section>
       )}
 
-      {/* Kartu aksi */}
+      <section className="bg-white rounded-xl shadow-md p-6 dark:bg-gray-800">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <Megaphone className="h-5 w-5 text-orange-500" />
+              Draft Aduan / Permohonan Klarifikasi
+            </h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Sesuaikan identitas, kronologi, dan bukti sebelum dikirim ke kanal resmi.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={copyDraft}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+          >
+            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            {copied ? 'Tersalin' : 'Salin Draft'}
+          </button>
+        </div>
+        <textarea
+          value={draft}
+          readOnly
+          rows={18}
+          className="mt-4 w-full rounded-lg border border-gray-200 bg-gray-50 p-4 font-mono text-xs leading-relaxed text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+        />
+      </section>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {ACTIONS.map((action) => {
           const Icon = action.icon;
           return (
-            <div key={action.title} className="bg-white rounded-xl shadow-md overflow-hidden flex flex-col dark:bg-gray-800">
+            <section key={action.title} className="bg-white rounded-xl shadow-md overflow-hidden flex flex-col dark:bg-gray-800">
               <div className={`p-4 bg-gradient-to-r ${action.color}`}>
                 <div className="flex items-center gap-2.5 text-white">
                   <Icon className="h-5 w-5 shrink-0" />
@@ -250,19 +387,18 @@ const CitizenActionGuide = () => {
                   ))}
                 </ol>
               </div>
-            </div>
+            </section>
           );
         })}
       </div>
 
-      {/* Disclaimer */}
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 dark:bg-gray-800 dark:border-gray-700">
         <div className="flex items-start gap-3">
           <Landmark className="h-5 w-5 text-blue-600 mt-0.5 shrink-0 dark:text-blue-400" />
           <p className="text-sm text-gray-700 leading-relaxed dark:text-gray-300">
             Panduan ini bersifat edukatif, bukan nasihat hukum. Untuk kasus spesifik, konsultasikan
-            dengan penasihat hukum atau lembaga bantuan hukum. Seluruh jalur di atas adalah mekanisme legal
-            yang dilindungi undang-undang.
+            dengan penasihat hukum atau lembaga bantuan hukum. Jalur di atas adalah mekanisme legal yang
+            dapat digunakan warga secara bertanggung jawab.
           </p>
         </div>
       </div>
