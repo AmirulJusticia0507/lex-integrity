@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { FileText, AlertTriangle, ArrowLeft, RefreshCw, Search, Scale, GitBranch, ExternalLink, Megaphone, Download } from 'lucide-react';
+import { FileText, AlertTriangle, ArrowLeft, RefreshCw, Search, Scale, GitBranch, ExternalLink, Megaphone, Download, Bug } from 'lucide-react';
 import { useRuleStore } from '../store/rules';
 
 const RuleDetail = () => {
@@ -179,6 +179,14 @@ const RuleDetail = () => {
             Muat Kontradiksi
           </button>
           <button
+            onClick={() => navigate(`/rules/${rule.rule_code}/defects`)}
+            className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/20"
+            title="Lihat titik cacat, dampak warga, dan aturan pembanding"
+          >
+            <Bug className="h-4 w-4" />
+            Titik Cacat
+          </button>
+          <button
             onClick={() => navigate(`/rules/${rule.rule_code}/hierarchy`)}
             className="flex items-center gap-2 px-4 py-2 border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 transition-colors dark:border-purple-800 dark:text-purple-300 dark:hover:bg-purple-900/20"
             title="Bandingkan hierarki & turunan peraturan antar jenjang JDIH"
@@ -234,6 +242,13 @@ const RuleDetail = () => {
           </div>
 
           <h4 className="font-medium text-gray-700 mb-3 dark:text-gray-300">Peraturan Serupa / Terkait</h4>
+          <button
+            onClick={() => navigate(`/rules/${rule.rule_code}/defects`)}
+            className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <Bug className="h-4 w-4" />
+            Buka Halaman Titik Cacat
+          </button>
           {conflicts.similar_rules && conflicts.similar_rules.length > 0 ? (
             <ul className="space-y-2">
               {conflicts.similar_rules.map((r) => (

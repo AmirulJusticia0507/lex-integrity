@@ -10,6 +10,7 @@ import LegalMatrix from './pages/LegalMatrix';
 import RuleSearch from './pages/RuleSearch';
 import RuleDetail from './pages/RuleDetail';
 import RuleHierarchy from './pages/RuleHierarchy';
+import RuleDefects from './pages/RuleDefects';
 import SourceViewer from './pages/SourceViewer';
 import CitizenActionGuide from './pages/CitizenActionGuide';
 import Analytics from './pages/Analytics';
@@ -95,6 +96,16 @@ function AnimatedRoutes() {
                 <PageWrapper>
                   <RequireAuth>
                     <RuleDetail />
+                  </RequireAuth>
+                </PageWrapper>
+              }
+            />
+            <Route
+              path="/rules/:rule_code/defects"
+              element={
+                <PageWrapper>
+                  <RequireAuth>
+                    <RuleDefects />
                   </RequireAuth>
                 </PageWrapper>
               }
