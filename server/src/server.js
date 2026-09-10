@@ -208,6 +208,7 @@ const startServer = async () => {
     await sequelize.query(`
       ALTER TABLE users
       ADD COLUMN IF NOT EXISTS phone VARCHAR(20),
+      ADD COLUMN IF NOT EXISTS profile_photo TEXT,
       ADD COLUMN IF NOT EXISTS two_factor_enabled BOOLEAN DEFAULT false,
       ADD COLUMN IF NOT EXISTS two_factor_secret VARCHAR(255),
       ADD COLUMN IF NOT EXISTS otp_code VARCHAR(64),

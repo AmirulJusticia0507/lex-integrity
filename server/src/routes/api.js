@@ -1550,7 +1550,7 @@ router.post('/auth/sso', async (req, res) => {
 router.get('/auth/profile', authenticateToken, async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'username', 'email', 'phone', 'role', 'two_factor_enabled', 'created_at']
+      attributes: ['id', 'username', 'email', 'phone', 'profile_photo', 'role', 'two_factor_enabled', 'created_at']
     });
     if (!user) {
       return res.status(404).json({ success: false, error: 'Pengguna tidak ditemukan' });
@@ -1564,7 +1564,7 @@ router.get('/auth/profile', authenticateToken, async (req, res) => {
 // PUT /api/auth/profile - Update profile sendiri (email, phone & password)
 router.put('/auth/profile', authenticateToken, async (req, res) => {
   try {
-    const { email, phone, currentPassword, newPassword } = req.body;
+    const { email, phone, profile_photo, currentPassword, newPassword } = req.body;
     const userId = req.user.id;
 
     const user = await User.findByPk(userId);
@@ -1588,6 +1588,13 @@ router.put('/auth/profile', authenticateToken, async (req, res) => {
     // Update phone
     if (phone !== undefined) {
       user.phone = phone || null;
+    }
+
+    if (profile_photo !== undefined) {
+      if (profile_photo && (!String(profile_photo).startsWith('data:image/') || String(profile_photo).length > 700000)) {
+        return res.status(400).json({ success: false, error: 'Foto profil harus berupa gambar maksimal 500KB' });
+      }
+      user.profile_photo = profile_photo || null;
     }
 
     // Update password
@@ -1614,6 +1621,7 @@ router.put('/auth/profile', authenticateToken, async (req, res) => {
         id: user.id,
         username: user.username,
         email: user.email,
+        profile_photo: user.profile_photo,
         phone: user.phone,
         role: user.role
       }

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Scale, ArrowLeft, Mail, Lock, Eye, EyeOff, Save, AlertCircle, Loader2, CheckCircle, User, Phone, ShieldCheck, ShieldOff, QrCode } from 'lucide-react';
+import { Scale, ArrowLeft, Mail, Lock, Eye, EyeOff, Save, AlertCircle, Loader2, CheckCircle, User, Phone, ShieldCheck, ShieldOff, QrCode, Camera, X } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthContext';
 import { apiUrl } from '../utils/http';
+
+const SHOW_2FA_PANEL = false;
 
 const Profile = () => {
   const { user, setAuth } = useAuth();
@@ -10,6 +12,7 @@ const Profile = () => {
   const [phone, setPhone] = useState('');
   const [username, setUsername] = useState('');
   const [role, setRole] = useState('');
+  const [profilePhoto, setProfilePhoto] = useState('');
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -47,6 +50,7 @@ const Profile = () => {
         if (res.ok && data.success) {
           setEmail(data.data.email);
           setPhone(data.data.phone || '');
+          setProfilePhoto(data.data.profile_photo || '');
           setUsername(data.data.username);
           setRole(data.data.role);
           setTwoFactorEnabled(data.data.two_factor_enabled);
@@ -84,7 +88,7 @@ const Profile = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ email, phone: phone || undefined, currentPassword: currentPassword || undefined, newPassword: newPassword || undefined }),
+        body: JSON.stringify({ email, phone: phone || undefined, profile_photo: profilePhoto || null, currentPassword: currentPassword || undefined, newPassword: newPassword || undefined }),
       });
       const data = await response.json();
       if (response.ok && data.success) {
@@ -102,6 +106,22 @@ const Profile = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError('File harus berupa gambar.');
+      return;
+    }
+    if (file.size > 500 * 1024) {
+      setError('Foto profil maksimal 500KB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setProfilePhoto(String(reader.result || ''));
+    reader.readAsDataURL(file);
   };
 
   const handleSetup2fa = async () => {
@@ -236,8 +256,12 @@ const Profile = () => {
               </div>
             ) : (
               <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100 dark:border-gray-700">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center dark:bg-blue-900/40">
-                  <User className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden dark:bg-blue-900/40">
+                  {profilePhoto ? (
+                    <img src={profilePhoto} alt={username} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                  )}
                 </div>
                 <div>
                   <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">{username}</p>
@@ -261,6 +285,31 @@ const Profile = () => {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Foto Profil */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                  <Camera className="h-4 w-4" />
+                  Foto Profil
+                </h3>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                    <Camera className="h-4 w-4" />
+                    Pilih Foto
+                    <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+                  </label>
+                  {profilePhoto && (
+                    <button
+                      type="button"
+                      onClick={() => setProfilePhoto('')}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-gray-700"
+                    >
+                      <X className="h-4 w-4" />
+                      Hapus Foto
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Email */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
@@ -368,7 +417,7 @@ const Profile = () => {
           </div>
 
           {/* Card 2FA */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200/70 p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700">
+          {SHOW_2FA_PANEL && <div className="bg-white rounded-xl shadow-sm border border-gray-200/70 p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-blue-500" />
               Autentikasi Dua Faktor (2FA)
@@ -479,7 +528,7 @@ const Profile = () => {
                 )}
               </div>
             )}
-          </div>
+          </div>}
         </div>
 
         <p className="text-center text-sm text-gray-500 pt-6 dark:text-gray-400">
