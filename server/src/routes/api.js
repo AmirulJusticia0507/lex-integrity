@@ -1365,6 +1365,21 @@ router.post('/auth/sso', async (req, res) => {
   }
 });
 
+// GET /api/auth/profile - Ambil data profil dari database
+router.get('/auth/profile', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['id', 'username', 'email', 'role', 'created_at']
+    });
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Pengguna tidak ditemukan' });
+    }
+    res.json({ success: true, data: user });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // PUT /api/auth/profile - Update profile sendiri (email & password)
 router.put('/auth/profile', authenticateToken, async (req, res) => {
   try {

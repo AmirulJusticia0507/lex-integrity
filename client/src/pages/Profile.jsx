@@ -8,13 +8,16 @@ import Swal from 'sweetalert2';
 const Profile = () => {
   const navigate = useNavigate();
   const { user, setAuth } = useAuth();
-  const [email, setEmail] = useState(user?.email || '');
+  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
+  const [role, setRole] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
@@ -22,6 +25,28 @@ const Profile = () => {
     const saved = localStorage.getItem('lex_dark_mode');
     if (saved === 'true') document.documentElement.classList.add('dark');
     return () => document.documentElement.classList.remove('dark');
+  }, []);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem('lex_auth_token');
+        const res = await fetch(apiUrl('/api/auth/profile'), {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setEmail(data.data.email);
+          setUsername(data.data.username);
+          setRole(data.data.role);
+        }
+      } catch (err) {
+        console.error('Gagal memuat profil:', err);
+      } finally {
+        setIsFetching(false);
+      }
+    };
+    fetchProfile();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -107,15 +132,21 @@ const Profile = () => {
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200/70 p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700">
           {/* User Info */}
-          <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100 dark:border-gray-700">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center dark:bg-blue-900/40">
-              <User className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          {isFetching ? (
+            <div className="flex items-center justify-center py-8 mb-6 pb-6 border-b border-gray-100 dark:border-gray-700">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
             </div>
-            <div>
-              <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">{user?.username}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{user?.role === 'admin' ? 'Administrator' : 'User'}</p>
+          ) : (
+            <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100 dark:border-gray-700">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center dark:bg-blue-900/40">
+                <User className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">{username}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{role === 'admin' ? 'Administrator' : 'User'}</p>
+              </div>
             </div>
-          </div>
+          )}
 
           {error && (
             <div className="mb-4 flex items-start gap-2 p-3 rounded-lg bg-red-50 text-red-700 text-sm dark:bg-gray-700 dark:text-red-400">
