@@ -1434,7 +1434,7 @@ router.post('/auth/otp/verify', async (req, res) => {
 // POST /api/auth/register - Public registration (khusus role user)
 router.post('/auth/register', async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, profile_photo } = req.body;
 
     if (!username || !email || !password) {
       return res.status(400).json({
@@ -1471,11 +1471,16 @@ router.post('/auth/register', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    if (profile_photo && (!String(profile_photo).startsWith('data:image/') || String(profile_photo).length > MAX_PROFILE_PHOTO_DATA_URL_LENGTH)) {
+      return res.status(400).json({ success: false, error: 'Foto profil harus berupa gambar maksimal 5MB' });
+    }
 
     const newUser = await User.create({
       username,
       email,
       password: hashedPassword,
+      profile_photo: profile_photo || null,
+      profile_photo_size: 64,
       role: 'user'
     });
 
@@ -1490,6 +1495,8 @@ router.post('/auth/register', async (req, res) => {
           id: newUser.id,
           username: newUser.username,
           email: newUser.email,
+          profile_photo: newUser.profile_photo,
+          profile_photo_size: newUser.profile_photo_size,
           role: newUser.role
         }
       }

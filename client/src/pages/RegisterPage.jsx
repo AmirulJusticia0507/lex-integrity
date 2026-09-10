@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Scale, Mail, Lock, User, Eye, EyeOff, UserPlus, AlertCircle, Loader2, ShieldCheck, TrendingUp, FileText, Cpu } from 'lucide-react';
+import { Scale, Mail, Lock, User, Eye, EyeOff, UserPlus, AlertCircle, Loader2, ShieldCheck, TrendingUp, FileText, Cpu, Camera, X } from 'lucide-react';
 import CapCaptcha from '../components/auth/CapCaptcha';
 import { useAuth } from '../components/auth/AuthContext';
 import { apiUrl } from '../utils/http';
 import Swal from 'sweetalert2';
+
+const MAX_PROFILE_PHOTO_SIZE = 5 * 1024 * 1024;
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -13,6 +15,7 @@ const RegisterPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [profilePhoto, setProfilePhoto] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -59,7 +62,7 @@ const RegisterPage = () => {
       const response = await fetch(apiUrl('/api/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ username, email, password, profile_photo: profilePhoto || null }),
       });
       const data = await response.json();
       if (response.ok && data.success) {
@@ -74,6 +77,22 @@ const RegisterPage = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError('File harus berupa gambar.');
+      return;
+    }
+    if (file.size > MAX_PROFILE_PHOTO_SIZE) {
+      setError('Foto profil maksimal 5MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setProfilePhoto(String(reader.result || ''));
+    reader.readAsDataURL(file);
   };
 
   const inputClass = "w-full pl-10 pr-10 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100";
@@ -160,6 +179,38 @@ const RegisterPage = () => {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
+                  Foto Profil
+                </label>
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden dark:bg-blue-900/40">
+                    {profilePhoto ? (
+                      <img src={profilePhoto} alt="Preview foto profil" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                      <Camera className="h-4 w-4" />
+                      Pilih Foto
+                      <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+                    </label>
+                    {profilePhoto && (
+                      <button
+                        type="button"
+                        onClick={() => setProfilePhoto('')}
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-gray-700"
+                      >
+                        <X className="h-4 w-4" />
+                        Hapus
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Username
