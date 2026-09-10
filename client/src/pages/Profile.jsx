@@ -5,6 +5,7 @@ import { useAuth } from '../components/auth/AuthContext';
 import { apiUrl } from '../utils/http';
 
 const SHOW_2FA_PANEL = false;
+const MAX_PROFILE_PHOTO_SIZE = 5 * 1024 * 1024;
 
 const Profile = () => {
   const { user, setAuth } = useAuth();
@@ -117,8 +118,8 @@ const Profile = () => {
       setError('File harus berupa gambar.');
       return;
     }
-    if (file.size > 500 * 1024) {
-      setError('Foto profil maksimal 500KB.');
+    if (file.size > MAX_PROFILE_PHOTO_SIZE) {
+      setError('Foto profil maksimal 5MB.');
       return;
     }
     const reader = new FileReader();

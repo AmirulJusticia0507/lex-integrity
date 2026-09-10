@@ -1591,8 +1591,8 @@ router.put('/auth/profile', authenticateToken, async (req, res) => {
     }
 
     if (profile_photo !== undefined) {
-      if (profile_photo && (!String(profile_photo).startsWith('data:image/') || String(profile_photo).length > 700000)) {
-        return res.status(400).json({ success: false, error: 'Foto profil harus berupa gambar maksimal 500KB' });
+      if (profile_photo && (!String(profile_photo).startsWith('data:image/') || String(profile_photo).length > MAX_PROFILE_PHOTO_DATA_URL_LENGTH)) {
+        return res.status(400).json({ success: false, error: 'Foto profil harus berupa gambar maksimal 5MB' });
       }
       user.profile_photo = profile_photo || null;
     }
@@ -2037,6 +2037,7 @@ const OTP_TTL_MS = (parseInt(process.env.OTP_TTL_SECONDS, 10) || 300) * 1000;
 const OTP_RESEND_COOLDOWN_MS = (parseInt(process.env.OTP_RESEND_COOLDOWN_SECONDS, 10) || 30) * 1000;
 const OTP_MAX_ATTEMPTS = parseInt(process.env.OTP_MAX_ATTEMPTS, 10) || 5;
 const SMTP_FROM = process.env.SMTP_FROM || process.env.SMTP_USER || 'miruljungkel@gmail.com';
+const MAX_PROFILE_PHOTO_DATA_URL_LENGTH = 7 * 1024 * 1024;
 
 function generateOtp() {
   return String(crypto.randomInt(0, 1000000)).padStart(6, '0');
