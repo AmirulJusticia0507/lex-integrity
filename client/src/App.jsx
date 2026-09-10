@@ -22,6 +22,7 @@ import About from './pages/About';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Help from './pages/Help';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import { Sidebar, PageWrapper, MobileTopBar, RouteLoadingOverlay } from './components/layout';
@@ -30,7 +31,7 @@ import { Analytics as VercelAnalytics } from '@vercel/analytics/react';
 import './utils/http';
 import './index.css';
 
-const STANDALONE_PATHS = ['/login', '/forgot-password', '/reset-password', '/privacy', '/help'];
+const STANDALONE_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/privacy', '/help'];
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -56,6 +57,7 @@ function AnimatedRoutes() {
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />

@@ -1250,6 +1250,74 @@ router.post('/auth/login', async (req, res) => {
   }
 });
 
+// POST /api/auth/register - Public registration (khusus role user)
+router.post('/auth/register', async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Field wajib (username, email, password) harus diisi'
+      });
+    }
+
+    if (String(password).length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password minimal 6 karakter'
+      });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Format email tidak valid'
+      });
+    }
+
+    const existing = await User.findOne({
+      where: { [Op.or]: [{ username }, { email }] }
+    });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        error: existing.username === username
+          ? 'Username sudah digunakan'
+          : 'Email sudah terdaftar'
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await User.create({
+      username,
+      email,
+      password: hashedPassword,
+      role: 'user'
+    });
+
+    const token = generateToken({ id: newUser.id, username: newUser.username, role: newUser.role });
+
+    res.status(201).json({
+      success: true,
+      message: 'Akun berhasil dibuat',
+      data: {
+        token,
+        user: {
+          id: newUser.id,
+          username: newUser.username,
+          email: newUser.email,
+          role: newUser.role
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // POST /api/auth/sso - Sinkronisasi user SSO (Google via Keycloak) ke database lokal,
 // lalu terbitkan JWT lokal agar token konsisten dengan middleware authenticateToken.
 // Keamanan: role TIDAK diambil dari payload klien — user baru selalu 'user'.
