@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Scale, ArrowLeft, Shield, Database, Brain, Cookie, Lock, Share2, Clock, Mail, UserCheck, Server, Eye } from 'lucide-react';
 
-const LAST_UPDATED = '26 Agustus 2026';
+const LAST_UPDATED = '10 September 2026';
 
 const Section = ({ icon: Icon, title, children }) => (
   <section className="bg-white rounded-xl shadow-sm border border-gray-200/70 p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700">
@@ -26,7 +26,7 @@ const storageTable = [
   {
     key: 'lex_auth_user',
     jenis: 'localStorage',
-    tujuan: 'Menyimpan ringkasan profil akun (nama, email, peran) untuk tampilan antarmuka.',
+    tujuan: 'Menyimpan ringkasan profil akun (nama, email, peran, dan foto profil bila tersedia) untuk tampilan antarmuka.',
     retensi: 'Sampai Anda keluar (logout).'
   },
   {
@@ -112,6 +112,10 @@ const PrivacyPolicy = () => {
               terenkripsi, bukan teks asli) saat Anda mendaftar atau masuk.
             </li>
             <li>
+              <b>Data Profil.</b> Nomor WhatsApp opsional, foto profil, dan preferensi ukuran avatar bila Anda
+              mengisinya melalui halaman profil atau formulir pendaftaran.
+            </li>
+            <li>
               <b>Data Peraturan.</b> Dokumen dan metadata produk hukum Indonesia (UU, PP, Perpres, Perda, Permen,
               dll.) yang bersumber dari kanal resmi JDIH — data ini bersifat publik dan bukan data pribadi Anda.
             </li>
@@ -120,20 +124,25 @@ const PrivacyPolicy = () => {
               (localStorage) dan/atau basis data lokal untuk perbaikan kualitas layanan.
             </li>
             <li>
+              <b>Data Verifikasi.</b> Kode OTP dapat dibuat untuk email atau WhatsApp bila fitur verifikasi digunakan.
+              Kode disimpan sementara dalam bentuk hash dan akan kedaluwarsa sesuai konfigurasi sistem.
+            </li>
+            <li>
               <b>Log Sistem.</b> Catatan teknis seperti waktu akses, aktivitas API, dan status layanan untuk
               keperluan keamanan serta pemecahan masalah.
             </li>
           </ul>
         </Section>
 
-        <Section icon={Brain} title="3. Pemrosesan AI 100% Lokal">
+        <Section icon={Brain} title="3. Pemrosesan AI">
           <p>
-            Seluruh pemrosesan kecerdasan buatan (analisis kontradiksi, deteksi loopholes, dan Chat AI) berjalan{' '}
-            <b>sepenuhnya secara lokal dan offline</b> menggunakan model bahasa lokal melalui Ollama.
+            Lex-Integrity dapat menggunakan model lokal melalui Ollama dan/atau penyedia AI eksternal seperti
+            Gemini, bergantung konfigurasi lingkungan server. Mode lokal dipakai saat layanan Ollama tersedia,
+            sedangkan mode production dapat memakai Gemini untuk menjaga fitur analisis tetap berjalan.
           </p>
           <p>
-            <b>Tidak ada data pribadi maupun isi dokumen yang dikirim ke server pihak ketiga</b>, cloud AI, atau
-            layanan eksternal mana pun dalam proses inferensi model.
+            Pertanyaan pengguna, cuplikan peraturan, dan konteks analisis yang relevan dapat diproses oleh model
+            yang aktif. Hindari memasukkan data pribadi sensitif ke Chat AI atau Compliance AI apabila tidak diperlukan.
           </p>
         </Section>
 
@@ -141,12 +150,27 @@ const PrivacyPolicy = () => {
           <ul className="list-disc pl-5 space-y-2">
             <li>Menyediakan akses ke fitur platform (explorer peraturan, legal matrix, analytics, chat AI).</li>
             <li>Memverifikasi identitas dan mengelola sesi login serta hak akses pengguna.</li>
+            <li>Mengirim kode verifikasi OTP melalui email atau kanal pesan yang dikonfigurasi, bila fitur tersebut digunakan.</li>
             <li>Mengingat preferensi tampilan agar pengalaman penggunaan lebih nyaman.</li>
+            <li>Mengambil, menyimpan, dan memperbarui metadata produk hukum publik dari sumber resmi dengan atribusi sumber.</li>
             <li>Memantau kesehatan sistem (database, cache, LLM worker) dan mencegah penyalahgunaan.</li>
           </ul>
         </Section>
 
-        <Section icon={Cookie} title="5. Cookies & Penyimpanan Lokal">
+        <Section icon={Server} title="5. Sumber JDIH & Crawler">
+          <p>
+            Lex-Integrity mengambil data produk hukum dari sumber publik seperti JDIH dan portal pemerintah terkait.
+            Pengambilan data dilakukan untuk dokumentasi, pencarian, analisis, dan rujukan sumber hukum.
+          </p>
+          <ul className="list-disc pl-5 space-y-2">
+            <li>Crawler menggunakan identitas <b>LexIntegrityBot</b> dan jeda request agar tidak membebani layanan sumber.</li>
+            <li>Setiap data peraturan disimpan bersama sumber, URL asal, metode pemrosesan, dan waktu pemrosesan bila tersedia.</li>
+            <li>Kami tidak bermaksud menghapus atribusi, mengubah substansi dokumen, atau mengklaim kepemilikan produk hukum publik.</li>
+            <li>Jika instansi pemilik sumber meminta koreksi, pembaruan, atau penghapusan data tertentu, permintaan dapat diajukan melalui kontak di bawah.</li>
+          </ul>
+        </Section>
+
+        <Section icon={Cookie} title="6. Cookies & Penyimpanan Lokal">
           <p>
             Lex-Integrity tidak menggunakan cookie pelacak (tracking cookies) dari pihak ketiga. Kami hanya
             menggunakan penyimpanan lokal browser (<i>localStorage</i>) untuk keperluan fungsional berikut:
@@ -181,11 +205,11 @@ const PrivacyPolicy = () => {
           </p>
         </Section>
 
-        <Section icon={Share2} title="6. Berbagi Data kepada Pihak Ketiga">
+        <Section icon={Share2} title="7. Berbagi Data kepada Pihak Ketiga">
           <p>
             Kami <b>tidak menjual, menyewakan, atau membagikan</b> data pribadi Anda kepada pihak ketiga untuk
-            tujuan komersial apa pun. Karena seluruh infrastruktur (PostgreSQL, Redis, Ollama) berjalan pada
-            server lokal Anda sendiri, data tidak meninggalkan lingkungan sistem tersebut.
+            tujuan komersial apa pun. Data dapat diproses oleh penyedia infrastruktur atau layanan yang Anda
+            konfigurasi sendiri, seperti hosting backend, database, email SMTP, penyedia pesan, atau penyedia AI.
           </p>
           <p>
             Pengecualian hanya dilakukan bila diwajibkan oleh peraturan perundang-undangan atau perintah hukum
@@ -193,16 +217,17 @@ const PrivacyPolicy = () => {
           </p>
         </Section>
 
-        <Section icon={Lock} title="7. Penyimpanan & Keamanan Data">
+        <Section icon={Lock} title="8. Penyimpanan & Keamanan Data">
           <ul className="list-disc pl-5 space-y-2">
             <li>Kata sandi disimpan dalam bentuk hash yang tidak dapat dibaca manusia.</li>
+            <li>Kode OTP disimpan sementara dalam bentuk hash dan dibatasi masa berlaku serta percobaannya.</li>
             <li>Akses API dilindungi autentikasi berbasis token serta rate limiting.</li>
-            <li>Basis data dan layanan pendukung berjalan di lingkungan lokal/tertutup.</li>
+            <li>Foto profil dibatasi ukuran unggahnya dan hanya digunakan untuk tampilan akun.</li>
             <li>Kami menerapkan prinsip minimalisasi data: hanya mengumpulkan data yang benar-benar diperlukan.</li>
           </ul>
         </Section>
 
-        <Section icon={UserCheck} title="8. Hak-Hak Anda">
+        <Section icon={UserCheck} title="9. Hak-Hak Anda">
           <p>Berdasarkan UU PDP, Anda berhak untuk:</p>
           <ul className="list-disc pl-5 space-y-2">
             <li>Meminta akses dan salinan data pribadi yang kami proses.</li>
@@ -217,7 +242,7 @@ const PrivacyPolicy = () => {
           </p>
         </Section>
 
-        <Section icon={Clock} title="9. Perubahan Kebijakan">
+        <Section icon={Clock} title="10. Perubahan Kebijakan">
           <p>
             Kebijakan ini dapat diperbarui dari waktu ke waktu seiring perkembangan layanan. Setiap perubahan
             material akan diumumkan melalui halaman ini beserta tanggal pembaruan terbaru. Kami menyarankan Anda
@@ -225,7 +250,7 @@ const PrivacyPolicy = () => {
           </p>
         </Section>
 
-        <Section icon={Mail} title="10. Kontak">
+        <Section icon={Mail} title="11. Kontak">
           <p>
             Untuk pertanyaan, permintaan, atau keluhan terkait Kebijakan Privasi &amp; Cookies ini, silakan hubungi:
           </p>
