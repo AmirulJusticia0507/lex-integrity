@@ -21,9 +21,37 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING(255),
     allowNull: false
   },
+  phone: {
+    type: DataTypes.STRING(20),
+    allowNull: true
+  },
   role: {
     type: DataTypes.STRING(50),
     defaultValue: 'user'
+  },
+  two_factor_enabled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  two_factor_secret: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  otp_code: {
+    type: DataTypes.STRING(64),
+    allowNull: true
+  },
+  otp_expires_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  otp_attempts: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  otp_sent_at: {
+    type: DataTypes.DATE,
+    allowNull: true
   },
   created_at: {
     type: DataTypes.DATE,

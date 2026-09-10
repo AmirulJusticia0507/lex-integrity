@@ -5,9 +5,21 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import { exec, fork } from 'child_process';
 import Bull from 'bull';
 import * as cheerio from 'cheerio';
+import { TOTP } from 'otplib';
+import QRCode from 'qrcode';
+
+// otplib v13 tidak lagi menyediakan singleton `authenticator`; bungkus kelas TOTP
+// agar API lama (generateSecret / keyuri / verify) tetap berfungsi.
+const otpTotp = new TOTP();
+const authenticator = {
+  generateSecret: () => otpTotp.generateSecret(),
+  keyuri: (label, issuer, secret) => otpTotp.toURI({ label, issuer, secret }),
+  verify: async ({ token, secret }) => Boolean(await otpTotp.verify({ token, secret })),
+};
 
 import twilio from 'twilio';
 import { sequelize, Rule, User, Role, Analytics } from '../models/index.js';
@@ -1229,7 +1241,175 @@ router.post('/auth/login', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Username atau password salah' });
     }
 
+    // Semua role wajib verifikasi OTP WhatsApp terlebih dahulu (kebijakan keamanan)
+    const hasPhone = !!user.phone && String(user.phone).replace(/\D/g, '').length >= 8;
+    const tempToken = jwt.sign(
+      { id: user.id, username: user.username, role: user.role, temp: true, purpose: 'otp' },
+      process.env.JWT_SECRET || 'your_jwt_secret_here_change_this_in_production',
+      { expiresIn: Math.ceil(OTP_TTL_MS / 1000) }
+    );
+    return res.json({
+      success: true,
+      message: 'Verifikasi OTP diperlukan',
+      data: {
+        requires_2fa: true,
+        requires_otp: true,
+        phone_required: !hasPhone,
+        masked_phone: hasPhone ? maskPhone(user.phone) : null,
+        temp_token: tempToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
+// POST /api/auth/2fa/login - Verifikasi 2FA saat login (TOTP authenticator + OTP WhatsApp)
+router.post('/auth/2fa/login', async (req, res) => {
+  try {
+    const { temp_token, code } = req.body;
+
+    if (!temp_token || !code) {
+      return res.status(400).json({ success: false, error: 'Token dan kode OTP wajib diisi' });
+    }
+
+    const decoded = verifyTempToken(temp_token);
+    if (!decoded) {
+      return res.status(401).json({ success: false, error: 'Token tidak valid atau sudah kedaluwarsa' });
+    }
+
+    const result = await verifyLoginOtp(decoded, code);
+    if (!result.ok) {
+      return res.status(result.status).json({ success: false, error: result.error });
+    }
+
+    const { user } = result;
+    const token = generateToken({ id: user.id, username: user.username, role: user.role });
+
+    res.json({
+      success: true,
+      message: 'Login berhasil',
+      data: {
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/auth/otp/send - Kirim kode OTP ke WhatsApp user (via Wablas)
+router.post('/auth/otp/send', async (req, res) => {
+  try {
+    const { temp_token, phone } = req.body;
+
+    if (!temp_token) {
+      return res.status(400).json({ success: false, error: 'Token wajib diisi' });
+    }
+
+    const decoded = verifyTempToken(temp_token);
+    if (!decoded) {
+      return res.status(401).json({ success: false, error: 'Token tidak valid atau sudah kedaluwarsa' });
+    }
+
+    const user = await User.findByPk(decoded.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Pengguna tidak ditemukan' });
+    }
+
+    // Jika nomor dikirim di body, set & simpan ke profil user
+    let normalizedPhone = user.phone
+      ? normalizePhone(user.phone)
+      : '';
+    if (phone !== undefined) {
+      normalizedPhone = normalizePhone(phone);
+      if (!normalizedPhone) {
+        return res.status(400).json({ success: false, error: 'Format nomor WhatsApp tidak valid (contoh: 081234567890)' });
+      }
+      user.phone = normalizedPhone;
+      await user.save();
+    }
+
+    if (!normalizedPhone) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nomor WhatsApp belum diatur. Silakan lengkapi nomor Anda.',
+        data: { requires_phone: true }
+      });
+    }
+
+    // Cooldown: 1 OTP per interval, jangan spam
+    if (user.otp_code && user.otp_sent_at) {
+      const elapsed = Date.now() - new Date(user.otp_sent_at).getTime();
+      const remaining = OTP_RESEND_COOLDOWN_MS - elapsed;
+      if (remaining > 0) {
+        return res.status(429).json({
+          success: false,
+          error: `Kode OTP sudah dikirim. Coba lagi dalam ${Math.ceil(remaining / 1000)} detik.`,
+          data: { retry_after_seconds: Math.ceil(remaining / 1000) }
+        });
+      }
+    }
+
+    const code = generateOtp();
+    user.otp_code = hashOtp(code);
+    user.otp_expires_at = new Date(Date.now() + OTP_TTL_MS);
+    user.otp_attempts = 0;
+    user.otp_sent_at = new Date();
+    await user.save();
+
+    const message = `Kode OTP Lex-Integrity Anda: ${code}. Berlaku ${Math.round(OTP_TTL_MS / 60000)} menit. Jangan bagikan kode ini kepada siapa pun.`;
+    const sendResult = await sendWablas(user.phone, message);
+    if (!sendResult.ok) {
+      return res.status(502).json({ success: false, error: `Gagal mengirim OTP: ${sendResult.error}` });
+    }
+
+    res.json({
+      success: true,
+      message: 'Kode OTP terkirim ke WhatsApp',
+      data: {
+        masked_phone: maskPhone(user.phone),
+        dev_mode: !!sendResult.dev_mode,
+        expires_in_seconds: Math.round(OTP_TTL_MS / 1000),
+        resend_after_seconds: Math.round(OTP_RESEND_COOLDOWN_MS / 1000)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/auth/otp/verify - Verifikasi kode OTP WhatsApp saat login
+router.post('/auth/otp/verify', async (req, res) => {
+  try {
+    const { temp_token, code } = req.body;
+
+    if (!temp_token || !code) {
+      return res.status(400).json({ success: false, error: 'Token dan kode OTP wajib diisi' });
+    }
+
+    const decoded = verifyTempToken(temp_token);
+    if (!decoded) {
+      return res.status(401).json({ success: false, error: 'Token tidak valid atau sudah kedaluwarsa' });
+    }
+
+    const result = await verifyLoginOtp(decoded, code);
+    if (!result.ok) {
+      return res.status(result.status).json({ success: false, error: result.error });
+    }
+
+    const { user } = result;
     const token = generateToken({ id: user.id, username: user.username, role: user.role });
 
     res.json({
@@ -1369,7 +1549,7 @@ router.post('/auth/sso', async (req, res) => {
 router.get('/auth/profile', authenticateToken, async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'username', 'email', 'role', 'created_at']
+      attributes: ['id', 'username', 'email', 'phone', 'role', 'two_factor_enabled', 'created_at']
     });
     if (!user) {
       return res.status(404).json({ success: false, error: 'Pengguna tidak ditemukan' });
@@ -1380,10 +1560,10 @@ router.get('/auth/profile', authenticateToken, async (req, res) => {
   }
 });
 
-// PUT /api/auth/profile - Update profile sendiri (email & password)
+// PUT /api/auth/profile - Update profile sendiri (email, phone & password)
 router.put('/auth/profile', authenticateToken, async (req, res) => {
   try {
-    const { email, currentPassword, newPassword } = req.body;
+    const { email, phone, currentPassword, newPassword } = req.body;
     const userId = req.user.id;
 
     const user = await User.findByPk(userId);
@@ -1402,6 +1582,11 @@ router.put('/auth/profile', authenticateToken, async (req, res) => {
         return res.status(409).json({ success: false, error: 'Email sudah terdaftar' });
       }
       user.email = email;
+    }
+
+    // Update phone
+    if (phone !== undefined) {
+      user.phone = phone || null;
     }
 
     // Update password
@@ -1428,8 +1613,101 @@ router.put('/auth/profile', authenticateToken, async (req, res) => {
         id: user.id,
         username: user.username,
         email: user.email,
+        phone: user.phone,
         role: user.role
       }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/auth/2fa/setup - Generate secret & QR code untuk 2FA
+router.post('/auth/2fa/setup', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Pengguna tidak ditemukan' });
+    }
+
+    const secret = authenticator.generateSecret();
+    const otpauth = authenticator.keyuri(user.email, 'Lex-Integrity', secret);
+    const qrCodeUrl = await QRCode.toDataURL(otpauth);
+
+    user.two_factor_secret = secret;
+    await user.save();
+
+    res.json({
+      success: true,
+      data: {
+        secret,
+        qrCode: qrCodeUrl
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/auth/2fa/verify - Verifikasi kode OTP untuk mengaktifkan 2FA
+router.post('/auth/2fa/verify', authenticateToken, async (req, res) => {
+  try {
+    const { code } = req.body;
+    const user = await User.findByPk(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Pengguna tidak ditemukan' });
+    }
+
+    if (!user.two_factor_secret) {
+      return res.status(400).json({ success: false, error: 'Silakan generate secret terlebih dahulu' });
+    }
+
+    const isValid = await authenticator.verify({ token: code, secret: user.two_factor_secret });
+    if (!isValid) {
+      return res.status(400).json({ success: false, error: 'Kode OTP tidak valid' });
+    }
+
+    user.two_factor_enabled = true;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: '2FA berhasil diaktifkan'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/auth/2fa/disable - Nonaktifkan 2FA
+router.post('/auth/2fa/disable', authenticateToken, async (req, res) => {
+  try {
+    const { code } = req.body;
+    const user = await User.findByPk(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Pengguna tidak ditemukan' });
+    }
+
+    if (!user.two_factor_enabled) {
+      return res.status(400).json({ success: false, error: '2FA belum aktif' });
+    }
+
+    if (user.two_factor_secret) {
+      const isValid = await authenticator.verify({ token: code, secret: user.two_factor_secret });
+      if (!isValid) {
+        return res.status(400).json({ success: false, error: 'Kode OTP tidak valid' });
+      }
+    }
+
+    user.two_factor_enabled = false;
+    user.two_factor_secret = null;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: '2FA berhasil dinonaktifkan'
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1734,6 +2012,130 @@ router.post('/analyze/multi-hop', authenticateToken, analyzeMultiHopCompliance);
 
 // GET /api/analyze/status - Cek ketersediaan agent & pgvector
 router.get('/analyze/status', getAgentStatus);
+
+// ── WhatsApp OTP (Wablas) ──────────────────────────────────────────────
+const WABLAS_BASE_URL = (process.env.WABLAS_BASE_URL || 'https://patroli.wablas.com').replace(/\/$/, '');
+const OTP_TTL_MS = (parseInt(process.env.OTP_TTL_SECONDS, 10) || 300) * 1000;
+const OTP_RESEND_COOLDOWN_MS = (parseInt(process.env.OTP_RESEND_COOLDOWN_SECONDS, 10) || 30) * 1000;
+const OTP_MAX_ATTEMPTS = parseInt(process.env.OTP_MAX_ATTEMPTS, 10) || 5;
+
+function generateOtp() {
+  return String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+}
+
+function hashOtp(code) {
+  return crypto.createHash('sha256').update(String(code)).digest('hex');
+}
+
+// Normalisasi nomor Indonesia: 0812.../62812.../+62812... -> 62812...
+function normalizePhone(phone) {
+  let p = String(phone || '').trim().replace(/[^\d]/g, '');
+  if (p.length < 8) return '';
+  if (p.startsWith('0')) p = `62${p.slice(1)}`;
+  else if (!p.startsWith('62')) p = `62${p}`;
+  return p;
+}
+
+function maskPhone(phone) {
+  const p = normalizePhone(phone);
+  if (p.length < 7) return '****';
+  return `${p.slice(0, 3)}****${p.slice(-3)}`;
+}
+
+async function sendWablas(phone, message) {
+  const token = process.env.WABLAS_TOKEN;
+  if (!token) {
+    const code = String(message).match(/\d{6}/)?.[0] || message;
+    console.log(`[WABLAS-DEV] WABLAS_TOKEN belum diatur — OTP untuk ${phone}: ${code}`);
+    return { ok: true, dev_mode: true };
+  }
+  try {
+    const res = await fetch(`${WABLAS_BASE_URL}/api/send-message`, {
+      method: 'POST',
+      headers: {
+        'Authorization': token,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ phone: normalizePhone(phone), message, secret: false }),
+    });
+    if (!res.ok) {
+      return { ok: false, error: `Wablas HTTP ${res.status}` };
+    }
+    const data = await res.json();
+    if (data && data.status === false) {
+      return { ok: false, error: data.remark || data.message || 'Wablas gagal mengirim pesan' };
+    }
+    return { ok: true, uid: data?.data?.uid };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+function verifyTempToken(temp_token) {
+  try {
+    const decoded = jwt.verify(temp_token, process.env.JWT_SECRET || 'your_jwt_secret_here_change_this_in_production');
+    return decoded && decoded.temp === true && decoded.purpose === 'otp' ? decoded : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Verifikasi kode saat login: prioritas OTP WhatsApp → fallback TOTP authenticator (legacy)
+async function verifyLoginOtp(decoded, code) {
+  const user = await User.findByPk(decoded.id);
+  if (!user) return { ok: false, status: 404, error: 'Pengguna tidak ditemukan' };
+
+  // Prioritas 1: OTP WhatsApp yang tersimpan
+  if (user.otp_code && user.otp_expires_at) {
+    if (new Date(user.otp_expires_at).getTime() < Date.now()) {
+      user.otp_code = null;
+      user.otp_expires_at = null;
+      user.otp_attempts = 0;
+      user.otp_sent_at = null;
+      await user.save();
+      return { ok: false, status: 400, error: 'Kode OTP kedaluwarsa. Silakan kirim ulang.' };
+    }
+
+    if (user.otp_attempts >= OTP_MAX_ATTEMPTS) {
+      user.otp_code = null;
+      user.otp_expires_at = null;
+      user.otp_attempts = 0;
+      user.otp_sent_at = null;
+      await user.save();
+      return { ok: false, status: 429, error: 'Terlalu banyak percobaan. Silakan kirim ulang OTP.' };
+    }
+
+    if (user.otp_code !== hashOtp(code)) {
+      user.otp_attempts = (user.otp_attempts || 0) + 1;
+      await user.save();
+      if (user.otp_attempts >= OTP_MAX_ATTEMPTS) {
+        user.otp_code = null;
+        user.otp_expires_at = null;
+        user.otp_attempts = 0;
+        user.otp_sent_at = null;
+        await user.save();
+        return { ok: false, status: 429, error: 'Percobaan habis. Silakan kirim ulang OTP.' };
+      }
+      return { ok: false, status: 400, error: `Kode OTP salah. Sisa percobaan: ${OTP_MAX_ATTEMPTS - user.otp_attempts}.` };
+    }
+
+    user.otp_code = null;
+    user.otp_expires_at = null;
+    user.otp_attempts = 0;
+    user.otp_sent_at = null;
+    await user.save();
+    return { ok: true, user };
+  }
+
+  // Prioritas 2: TOTP authenticator (dipakai bila user mengaktifkan 2FA via Profil)
+  if (user.two_factor_enabled && user.two_factor_secret) {
+    const isValid = await authenticator.verify({ token: code, secret: user.two_factor_secret });
+    if (!isValid) return { ok: false, status: 400, error: 'Kode OTP tidak valid' };
+    return { ok: true, user };
+  }
+
+  return { ok: false, status: 400, error: 'Kode OTP belum dikirim. Klik "Kirim OTP" terlebih dahulu.' };
+}
 
 // ── WhatsApp Messaging ───────────────────────────────────────────────
 

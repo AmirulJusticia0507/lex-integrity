@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Scale, Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, Loader2, ShieldCheck, TrendingUp, FileText, Cpu } from 'lucide-react';
+import { Scale, Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, Loader2, ShieldCheck, TrendingUp, FileText, Cpu, MessageCircle } from 'lucide-react';
 import CapCaptcha from '../components/auth/CapCaptcha';
 import { useAuth } from '../components/auth/AuthContext';
 import { goGoogleLogin, handleGoogleCallback } from '../components/auth/googleAuth';
@@ -29,6 +29,36 @@ const LoginPage = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState(null);
   const googleHandled = useRef(false);
+
+  // 2FA state (OTP WhatsApp)
+  const [requires2fa, setRequires2fa] = useState(false);
+  const [tempToken, setTempToken] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [is2faLoading, setIs2faLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [phoneRequired, setPhoneRequired] = useState(false);
+  const [phoneInput, setPhoneInput] = useState('');
+  const [maskedPhone, setMaskedPhone] = useState(null);
+  const [resendAfter, setResendAfter] = useState(0);
+
+  useEffect(() => {
+    if (resendAfter <= 0) return;
+    const t = setTimeout(() => setResendAfter((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendAfter]);
+
+  const reset2fa = () => {
+    setRequires2fa(false);
+    setTempToken('');
+    setOtpCode('');
+    setOtpSent(false);
+    setPhoneRequired(false);
+    setPhoneInput('');
+    setMaskedPhone(null);
+    setResendAfter(0);
+    setError(null);
+  };
 
   const goToDashboard = () => {
     Swal.fire({
@@ -92,8 +122,17 @@ const LoginPage = () => {
       });
       const data = await response.json();
       if (response.ok && data.success) {
-        setAuth(data.data.token, data.data.user);
-        goToDashboard();
+        if (data.data.requires_2fa) {
+          setRequires2fa(true);
+          setTempToken(data.data.temp_token);
+          setPhoneRequired(!!data.data.phone_required);
+          setMaskedPhone(data.data.masked_phone || null);
+          setOtpSent(false);
+          setError(null);
+        } else {
+          setAuth(data.data.token, data.data.user);
+          goToDashboard();
+        }
       } else {
         setError(data.error || 'Login gagal');
       }
@@ -102,6 +141,78 @@ const LoginPage = () => {
       setError('Tidak dapat terhubung ke server');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSendOtp = async (e) => {
+    e.preventDefault();
+    setError(null);
+    if (phoneRequired) {
+      const digits = (phoneInput || '').replace(/\D/g, '');
+      if (digits.length < 8) {
+        setError('Masukkan nomor WhatsApp terlebih dahulu (contoh: 081234567890).');
+        return;
+      }
+    }
+    setIsSendingOtp(true);
+    try {
+      const body = { temp_token: tempToken };
+      if (phoneRequired) body.phone = phoneInput;
+      const response = await fetch(apiUrl('/api/auth/otp/send'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setOtpSent(true);
+        setPhoneRequired(false);
+        setMaskedPhone(data.data.masked_phone || maskedPhone);
+        setResendAfter(data.data.resend_after_seconds || 0);
+        if (data.data.dev_mode) {
+          setError('Mode pengembangan: kode OTP tidak dikirim via WhatsApp (lihat console server).');
+        }
+      } else {
+        setError(data.error || 'Gagal mengirim OTP');
+        if (data.data?.retry_after_seconds) {
+          setResendAfter(data.data.retry_after_seconds);
+        }
+        if (data.data?.requires_phone) setPhoneRequired(true);
+      }
+    } catch (err) {
+      console.error('Send OTP error:', err);
+      setError('Tidak dapat terhubung ke server');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerify2fa = async (e) => {
+    e.preventDefault();
+    setError(null);
+    if (!otpCode || otpCode.length !== 6) {
+      setError('Kode OTP harus 6 digit.');
+      return;
+    }
+    setIs2faLoading(true);
+    try {
+      const response = await fetch(apiUrl('/api/auth/otp/verify'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ temp_token: tempToken, code: otpCode }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setAuth(data.data.token, data.data.user);
+        goToDashboard();
+      } else {
+        setError(data.error || 'Verifikasi 2FA gagal');
+      }
+    } catch (err) {
+      console.error('2FA verify error:', err);
+      setError('Tidak dapat terhubung ke server');
+    } finally {
+      setIs2faLoading(false);
     }
   };
 
@@ -176,9 +287,15 @@ const LoginPage = () => {
 
           <div className="bg-white rounded-2xl shadow-lg p-8 dark:bg-gray-800 animate-fade-slide-down">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Masuk</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {requires2fa ? 'Verifikasi OTP' : 'Masuk'}
+              </h2>
               <p className="text-sm text-gray-500 mt-1 dark:text-gray-400">
-                Selamat datang kembali! Silakan masuk ke akun Anda.
+                {requires2fa
+                  ? phoneRequired
+                    ? 'Lengkapi nomor WhatsApp Anda untuk menerima kode OTP.'
+                    : 'Masukkan kode OTP yang dikirim ke WhatsApp Anda.'
+                  : 'Selamat datang kembali! Silakan masuk ke akun Anda.'}
               </p>
             </div>
 
@@ -189,6 +306,80 @@ const LoginPage = () => {
               </div>
             )}
 
+            {requires2fa ? (
+              <form onSubmit={handleVerify2fa} className="space-y-4">
+                {phoneRequired && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                      Nomor WhatsApp
+                    </label>
+                    <div className="relative">
+                      <MessageCircle className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <input
+                        type="tel"
+                        value={phoneInput}
+                        onChange={(e) => setPhoneInput(e.target.value.replace(/[^\d\s+().-]/g, ''))}
+                        placeholder="08xxxxxxxxxx"
+                        required={phoneRequired}
+                        className={inputClass}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">
+                      Kode OTP akan dikirim ke nomor ini dan tersimpan untuk login berikutnya.
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleSendOtp}
+                  disabled={isSendingOtp || resendAfter > 0}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isSendingOtp ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Mengirim OTP...</>
+                  ) : resendAfter > 0 ? (
+                    <><MessageCircle className="h-4 w-4" /> Kirim ulang dalam {resendAfter}s</>
+                  ) : (
+                    <><MessageCircle className="h-4 w-4" /> {otpSent ? 'Kirim Ulang OTP' : 'Kirim OTP ke WhatsApp'}</>
+                  )}
+                </button>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                    Kode OTP (6 digit)
+                  </label>
+                  <input
+                    type="text"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="000000"
+                    required
+                    autoFocus={otpSent}
+                    className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 text-center text-2xl tracking-[0.5em] font-mono"
+                    maxLength={6}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={is2faLoading || !otpSent}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {is2faLoading ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Memverifikasi...</>
+                  ) : (
+                    <><ShieldCheck className="h-4 w-4" /> Verifikasi</>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={reset2fa}
+                  className="w-full py-2.5 text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                >
+                  Kembali ke login
+                </button>
+              </form>
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
@@ -268,7 +459,10 @@ const LoginPage = () => {
                 )}
               </button>
             </form>
+            )}
 
+            {!requires2fa && (
+            <>
             <div className="my-5 flex items-center gap-3">
               <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
               <span className="text-xs text-gray-400 dark:text-gray-500">atau</span>
@@ -317,6 +511,8 @@ const LoginPage = () => {
                 Dilindungi oleh CAPTCHA proof-of-work self-hosted (Cap)
               </a>
             </div>
+            </>
+            )}
           </div>
         </div>
       </div>

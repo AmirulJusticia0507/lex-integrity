@@ -205,6 +205,16 @@ const startServer = async () => {
     const { sequelize } = await import('./models/index.js');
     
     await sequelize.sync();
+    await sequelize.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS phone VARCHAR(20),
+      ADD COLUMN IF NOT EXISTS two_factor_enabled BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS two_factor_secret VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS otp_code VARCHAR(64),
+      ADD COLUMN IF NOT EXISTS otp_expires_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS otp_attempts INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS otp_sent_at TIMESTAMP
+    `);
     console.log('📊 Database tables synced');
     
     let currentPort = parseInt(PORT, 10) || 3000;
