@@ -30,6 +30,7 @@ import CacheService from '../services/CacheService.js';
 import BackupService from '../services/BackupService.js';
 import ScheduleService from '../services/ScheduleService.js';
 import CrawlerService from '../services/CrawlerService.js';
+import { politeFetch } from '../utils/crawlerPolicy.js';
 import { getBullRedisConfig } from '../config/redis.js';
 import { fetchOllama } from '../config/ollama.js';
 import { generateGeminiResponse, getGeminiModel, hasGemini } from '../config/gemini.js';
@@ -51,9 +52,8 @@ function parseKpuDate(code) {
 }
 
 async function scrapeKpuPeraturan() {
-  const response = await fetch(KPU_PERATURAN_URL, {
+  const response = await politeFetch(KPU_PERATURAN_URL, {
     headers: {
-      'User-Agent': 'LexIntegrityBot/1.0',
       'Accept': 'text/html,application/xhtml+xml',
     },
   });
@@ -1977,9 +1977,9 @@ router.get('/rules/:rule_code/source-docs', authenticateToken, async (req, res) 
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 20000);
-    const pageRes = await fetch(parsed.href, {
+    const pageRes = await politeFetch(parsed.href, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'LexIntegrityBot/1.0 (+document viewer)' }
+      headers: { 'Accept': 'text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.8' }
     });
     clearTimeout(timeoutId);
     if (!pageRes.ok) {

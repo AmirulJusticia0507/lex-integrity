@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import crypto from 'crypto';
 import Rule from '../models/Rule.js';
+import { politeFetch, sleep } from './crawlerPolicy.js';
 
 const SOURCE_META = {
   'https://peraturan.bpk.go.id/': {
@@ -65,11 +66,9 @@ function lastPageFromHtml($) {
 }
 
 async function fetchHtml(url) {
-  const response = await fetch(url, {
+  const response = await politeFetch(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36 LexIntegrityBot/1.0',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
     },
   });
   if (!response.ok) throw new Error(`${url} HTTP ${response.status}`);
@@ -226,11 +225,9 @@ async function scrapeSource(sourceUrl) {
     source: new URL(baseUrl).hostname.replace(/^www\./, ''),
   };
 
-  const response = await fetch(baseUrl, {
+  const response = await politeFetch(baseUrl, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36 LexIntegrityBot/1.0',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
     },
   });
   if (!response.ok) throw new Error(`${baseUrl} HTTP ${response.status}`);
@@ -301,9 +298,8 @@ async function bulkInsert(rows) {
 
 async function scrapeBpk() {
   const baseUrl = 'https://peraturan.bpk.go.id/Search?jenis=27';
-  const response = await fetch(baseUrl, {
+  const response = await politeFetch(baseUrl, {
     headers: {
-      'User-Agent': 'Mozilla/5.0',
       'Accept': 'text/html,application/xhtml+xml',
       'Referer': 'https://peraturan.bpk.go.id/',
     },
@@ -346,10 +342,9 @@ async function scrapeBpk() {
 }
 
 async function scrapeKpk() {
-  const [produkResponse, jenisResponse] = await Promise.all([
-    fetch(`${KPK_API}/produk-hukum-dt?`, { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' } }),
-    fetch(`${KPK_API}/jenis/`, { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' } }),
-  ]);
+  const produkResponse = await politeFetch(`${KPK_API}/produk-hukum-dt?`, { headers: { 'Accept': 'application/json' } });
+  await sleep();
+  const jenisResponse = await politeFetch(`${KPK_API}/jenis/`, { headers: { 'Accept': 'application/json' } });
   if (!produkResponse.ok) throw new Error(`${KPK_API}/produk-hukum-dt HTTP ${produkResponse.status}`);
 
   const produkJson = await produkResponse.json();
