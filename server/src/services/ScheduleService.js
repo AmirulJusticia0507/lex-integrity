@@ -42,6 +42,20 @@ const DEFAULT_CONFIG = {
       enabled: true
     },
     {
+      id: 'bpk-mingguan',
+      type: 'queue',
+      cron: '0 4 * * 2',
+      enabled: false,
+      params: { sources: ['https://peraturan.bpk.go.id/'] }
+    },
+    {
+      id: 'kpk-mingguan',
+      type: 'queue',
+      cron: '0 4 * * 3',
+      enabled: false,
+      params: { sources: ['https://jdih.kpk.go.id/'] }
+    },
+    {
       id: 'backup-harian',
       type: 'backup',
       cron: '0 2 * * *',
@@ -98,6 +112,7 @@ class ScheduleService {
       console.error('[Scheduler] Konfigurasi tidak valid, scheduler tidak berjalan:', error.message);
       return;
     }
+    this._mergeDefaultJobs();
 
     const timezone = this.config.timezone || 'Asia/Jakarta';
     for (const job of this.config.jobs || []) {
@@ -149,6 +164,15 @@ class ScheduleService {
     }
     this.lastRuns[job.id] = { at: startedAt, finished_at: new Date().toISOString(), status, message };
     console.log(`[Scheduler] "${job.id}" selesai [${status}] ${message}`);
+  }
+
+  _mergeDefaultJobs() {
+    const existingIds = new Set((this.config.jobs || []).map((job) => job.id));
+    const missing = DEFAULT_CONFIG.jobs.filter((job) => !existingIds.has(job.id));
+    if (missing.length === 0) return;
+    this.config.jobs = [...(this.config.jobs || []), ...missing];
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(this.config, null, 2));
+    console.log(`[Scheduler] Menambahkan default job baru: ${missing.map((job) => job.id).join(', ')}`);
   }
 
   /** Scraping JDIH Jogja — sama seperti POST /api/actions/scrape-jogja. */

@@ -42,6 +42,22 @@ const DashboardOverview = () => {
       body: { source: 'kpu', sources: ['https://jdih.kpu.go.id/peraturan-kpu'] },
       available: true,
     },
+    {
+      id: 'bpk',
+      title: 'Database Peraturan BPK',
+      description: 'Metadata produk hukum dari peraturan.bpk.go.id',
+      endpoint: '/api/actions/scrape',
+      body: { source: 'generic', sources: ['https://peraturan.bpk.go.id/'] },
+      available: true,
+    },
+    {
+      id: 'kpk',
+      title: 'JDIH KPK',
+      description: 'Metadata produk hukum dari jdih.kpk.go.id',
+      endpoint: '/api/actions/scrape',
+      body: { source: 'generic', sources: ['https://jdih.kpk.go.id/'] },
+      available: true,
+    },
   ];
   
   useEffect(() => {
