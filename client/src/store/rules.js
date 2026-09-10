@@ -135,8 +135,9 @@ function RuleProvider({ children }) {
     try {
       const queryParams = new URLSearchParams({ search: query, limit: 100 });
       Object.keys(filters).forEach(key => {
-        if (filters[key] && filters[key] !== 'all') {
-          queryParams.append(key, filters[key]);
+        const value = filters[key];
+        if (value && value !== 'all' && typeof value !== 'object') {
+          queryParams.append(key, value);
         }
       });
       const response = await axios.get(`${API_BASE_URL}/api/rules?${queryParams.toString()}`);
