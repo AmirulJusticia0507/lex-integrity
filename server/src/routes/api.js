@@ -1365,6 +1365,62 @@ router.post('/auth/sso', async (req, res) => {
   }
 });
 
+// PUT /api/auth/profile - Update profile sendiri (email & password)
+router.put('/auth/profile', authenticateToken, async (req, res) => {
+  try {
+    const { email, currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Pengguna tidak ditemukan' });
+    }
+
+    // Update email
+    if (email && email !== user.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ success: false, error: 'Format email tidak valid' });
+      }
+      const existing = await User.findOne({ where: { email, id: { [Op.ne]: userId } } });
+      if (existing) {
+        return res.status(409).json({ success: false, error: 'Email sudah terdaftar' });
+      }
+      user.email = email;
+    }
+
+    // Update password
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({ success: false, error: 'Password lama wajib diisi' });
+      }
+      if (String(newPassword).length < 6) {
+        return res.status(400).json({ success: false, error: 'Password baru minimal 6 karakter' });
+      }
+      const valid = await bcrypt.compare(currentPassword, user.password);
+      if (!valid) {
+        return res.status(401).json({ success: false, error: 'Password lama salah' });
+      }
+      user.password = await bcrypt.hash(newPassword, 10);
+    }
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Profil berhasil diperbarui',
+      data: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // POST /api/auth/forgot-password - Request password reset (simulated)
 router.post('/auth/forgot-password', async (req, res) => {
   try {

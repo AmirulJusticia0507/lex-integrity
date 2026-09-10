@@ -427,6 +427,13 @@ export const Sidebar = () => {
                     <span className="font-medium text-gray-800 dark:text-gray-100">{user.username}</span>
                     <span className="text-xs text-gray-400 dark:text-gray-500">({user.role})</span>
                   </div>
+                  <a
+                    href="/profile"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded hover:bg-blue-50 hover:text-blue-600 transition-colors dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Profil
+                  </a>
                   <button
                     onClick={handleLogout}
                     className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 rounded hover:bg-red-50 transition-colors dark:text-red-400 dark:hover:bg-gray-800"
