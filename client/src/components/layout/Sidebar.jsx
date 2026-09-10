@@ -212,6 +212,24 @@ export const Sidebar = () => {
   
   const sidebarWidth = collapsed ? 'w-16' : 'w-64';
   const isChatRoute = location.pathname === '/chat';
+  const accountAvatar = user?.profile_photo ? (
+    <img
+      src={user.profile_photo}
+      alt={user.username || 'Akun'}
+      className="h-5 w-5 rounded-full object-cover mr-2"
+    />
+  ) : (
+    <UserCircle className="h-5 w-5 mr-2" />
+  );
+  const menuAvatar = user?.profile_photo ? (
+    <img
+      src={user.profile_photo}
+      alt={user.username || 'Akun'}
+      className="h-7 w-7 rounded-full object-cover"
+    />
+  ) : (
+    <UserCircle className="h-5 w-5 text-blue-500" />
+  );
 
   return (
     <>
@@ -412,7 +430,7 @@ export const Sidebar = () => {
             aria-label="Menu Akun"
           >
             <span className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
-              <UserCircle className="h-5 w-5 mr-2" />
+              {accountAvatar}
               Akun
             </span>
             <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${accountOpen ? 'rotate-180' : ''}`} />
@@ -423,7 +441,7 @@ export const Sidebar = () => {
               {user ? (
                 <>
                   <div className="flex items-center gap-2 px-3 py-2 text-sm">
-                    <UserCircle className="h-5 w-5 text-blue-500" />
+                    {menuAvatar}
                     <span className="font-medium text-gray-800 dark:text-gray-100">{user.username}</span>
                     <span className="text-xs text-gray-400 dark:text-gray-500">({user.role})</span>
                   </div>
