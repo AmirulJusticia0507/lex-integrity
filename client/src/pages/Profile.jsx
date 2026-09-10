@@ -13,6 +13,7 @@ const Profile = () => {
   const [username, setUsername] = useState('');
   const [role, setRole] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
+  const [profilePhotoSize, setProfilePhotoSize] = useState(64);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -51,6 +52,7 @@ const Profile = () => {
           setEmail(data.data.email);
           setPhone(data.data.phone || '');
           setProfilePhoto(data.data.profile_photo || '');
+          setProfilePhotoSize(data.data.profile_photo_size || 64);
           setUsername(data.data.username);
           setRole(data.data.role);
           setTwoFactorEnabled(data.data.two_factor_enabled);
@@ -88,7 +90,7 @@ const Profile = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ email, phone: phone || undefined, profile_photo: profilePhoto || null, currentPassword: currentPassword || undefined, newPassword: newPassword || undefined }),
+        body: JSON.stringify({ email, phone: phone || undefined, profile_photo: profilePhoto || null, profile_photo_size: profilePhotoSize, currentPassword: currentPassword || undefined, newPassword: newPassword || undefined }),
       });
       const data = await response.json();
       if (response.ok && data.success) {
@@ -217,6 +219,7 @@ const Profile = () => {
   };
 
   const inputClass = "w-full pl-10 pr-10 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100";
+  const avatarStyle = { width: `${profilePhotoSize}px`, height: `${profilePhotoSize}px` };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -256,7 +259,10 @@ const Profile = () => {
               </div>
             ) : (
               <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100 dark:border-gray-700">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden dark:bg-blue-900/40">
+                <div
+                  className="shrink-0 max-w-32 max-h-32 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden dark:bg-blue-900/40"
+                  style={avatarStyle}
+                >
                   {profilePhoto ? (
                     <img src={profilePhoto} alt={username} className="w-full h-full object-cover" />
                   ) : (
@@ -291,22 +297,51 @@ const Profile = () => {
                   <Camera className="h-4 w-4" />
                   Foto Profil
                 </h3>
-                <div className="flex flex-wrap items-center gap-3">
-                  <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
-                    <Camera className="h-4 w-4" />
-                    Pilih Foto
-                    <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
-                  </label>
-                  {profilePhoto && (
-                    <button
-                      type="button"
-                      onClick={() => setProfilePhoto('')}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-gray-700"
-                    >
-                      <X className="h-4 w-4" />
-                      Hapus Foto
-                    </button>
-                  )}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <div
+                    className="shrink-0 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden dark:bg-blue-900/40"
+                    style={avatarStyle}
+                  >
+                    {profilePhoto ? (
+                      <img src={profilePhoto} alt="Preview foto profil" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                        <Camera className="h-4 w-4" />
+                        Pilih Foto
+                        <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+                      </label>
+                      {profilePhoto && (
+                        <button
+                          type="button"
+                          onClick={() => setProfilePhoto('')}
+                          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-gray-700"
+                        >
+                          <X className="h-4 w-4" />
+                          Hapus Foto
+                        </button>
+                      )}
+                    </div>
+                    <label className="block">
+                      <span className="mb-2 flex items-center justify-between text-xs font-medium text-gray-500 dark:text-gray-400">
+                        <span>Ukuran foto</span>
+                        <span>{profilePhotoSize}px</span>
+                      </span>
+                      <input
+                        type="range"
+                        min="48"
+                        max="160"
+                        step="4"
+                        value={profilePhotoSize}
+                        onChange={(e) => setProfilePhotoSize(Number(e.target.value))}
+                        className="w-full accent-blue-600"
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
 

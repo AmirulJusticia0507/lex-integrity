@@ -1550,7 +1550,7 @@ router.post('/auth/sso', async (req, res) => {
 router.get('/auth/profile', authenticateToken, async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'username', 'email', 'phone', 'profile_photo', 'role', 'two_factor_enabled', 'created_at']
+      attributes: ['id', 'username', 'email', 'phone', 'profile_photo', 'profile_photo_size', 'role', 'two_factor_enabled', 'created_at']
     });
     if (!user) {
       return res.status(404).json({ success: false, error: 'Pengguna tidak ditemukan' });
@@ -1564,7 +1564,7 @@ router.get('/auth/profile', authenticateToken, async (req, res) => {
 // PUT /api/auth/profile - Update profile sendiri (email, phone & password)
 router.put('/auth/profile', authenticateToken, async (req, res) => {
   try {
-    const { email, phone, profile_photo, currentPassword, newPassword } = req.body;
+    const { email, phone, profile_photo, profile_photo_size, currentPassword, newPassword } = req.body;
     const userId = req.user.id;
 
     const user = await User.findByPk(userId);
@@ -1597,6 +1597,14 @@ router.put('/auth/profile', authenticateToken, async (req, res) => {
       user.profile_photo = profile_photo || null;
     }
 
+    if (profile_photo_size !== undefined) {
+      const size = parseInt(profile_photo_size, 10);
+      if (!Number.isInteger(size) || size < 48 || size > 160) {
+        return res.status(400).json({ success: false, error: 'Ukuran foto profil harus antara 48-160px' });
+      }
+      user.profile_photo_size = size;
+    }
+
     // Update password
     if (newPassword) {
       if (!currentPassword) {
@@ -1622,6 +1630,7 @@ router.put('/auth/profile', authenticateToken, async (req, res) => {
         username: user.username,
         email: user.email,
         profile_photo: user.profile_photo,
+        profile_photo_size: user.profile_photo_size,
         phone: user.phone,
         role: user.role
       }
