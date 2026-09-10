@@ -10,7 +10,22 @@
     "embeddings": "node src/scripts/generateEmbeddings.js",
     "evaluate": "node src/scripts/evaluateRAG.js",
     "evaluate:golden": "node src/scripts/evaluateRAG.js --dataset=src/scripts/golden_set.json",
-    "test": "jest"
+    "test": "jest",
+
+    "load:ma": "node src/scripts/loadMA.js",
+    "load:mk": "node src/scripts/loadMK.js",
+    "load:kemendagri": "node src/scripts/loadKemendagri.js",
+    "load:all-new": "node src/scripts/loadMA.js && node src/scripts/loadMK.js && node src/scripts/loadKemendagri.js",
+
+    "scrape:ma": "cd ../scripts/scraper && python jdih_ma_playwright.py --no-pdf --output-json ma_peraturan.json",
+    "scrape:mk": "cd ../scripts/scraper && python jdih_mk_playwright.py --no-pdf --output-json mk_peraturan.json",
+    "scrape:kemendagri": "cd ../scripts/scraper && python jdih_kemendagri_scraper.py --no-pdf --output-json kemendagri_peraturan.json",
+    "scrape:national": "cd ../scripts/scraper && python jdih_national_api.py --instansi all --no-pdf",
+    "scrape:national:ma": "cd ../scripts/scraper && python jdih_national_api.py --instansi ma --no-pdf --output-json ma_peraturan.json",
+    "scrape:national:mk": "cd ../scripts/scraper && python jdih_national_api.py --instansi mk --no-pdf --output-json mk_peraturan.json",
+    "scrape:national:kemendagri": "cd ../scripts/scraper && python jdih_national_api.py --instansi kemendagri --no-pdf --output-json kemendagri_peraturan.json",
+    "scrape:all-new": "npm run scrape:ma && npm run scrape:mk && npm run scrape:kemendagri",
+    "playwright:install": "python -m playwright install chromium"
   },
   "dependencies": {
     "axios": "^1.19.0",

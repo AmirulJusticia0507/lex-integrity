@@ -38,3 +38,12 @@ server/scrape-schedule.json
 
 # Temp debug scripts
 server/src/scripts/debugUrls.js
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+scripts/scraper/__pycache__/
+
+# Playwright logs
+scripts/scraper/*.log
