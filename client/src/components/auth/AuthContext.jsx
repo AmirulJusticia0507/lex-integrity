@@ -75,3 +75,24 @@ export function RequireAuth({ children }) {
 
   return children;
 }
+
+export function RequireAdmin({ children }) {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && (!user || user.role !== 'admin')) {
+      navigate('/', { replace: true });
+    }
+  }, [loading, user, navigate]);
+
+  if (loading) {
+    return <LoadingScreen label="Memeriksa sesi..." />;
+  }
+
+  if (!user || user.role !== 'admin') {
+    return null;
+  }
+
+  return children;
+}

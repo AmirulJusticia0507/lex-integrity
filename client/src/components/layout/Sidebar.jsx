@@ -197,16 +197,18 @@ export const Sidebar = () => {
     setCollapsed(c => !c);
   };
 
-  const menuItems = [
-    { icon: Grid,     label: 'Dashboard',       path: '/' },
+  const allMenuItems = [
+    { icon: Grid,     label: 'Dashboard',        path: '/' },
     { icon: FileText, label: 'Explorer',         path: '/rules' },
     { icon: Search,   label: 'Search',           path: '/rules/search' },
     { icon: BarChart2,label: 'Legal Matrix',     path: '/matrix' },
     { icon: Brain,    label: 'Compliance AI',    path: '/compliance' },
     { icon: TrendingUp,label:'Analytics',        path: '/analytics' },
-    { icon: Database, label: 'Kesehatan Sistem',        path: '/dashboard' },
-    { icon: Settings, label: 'Data Management',  path: '/data' }
+    { icon: Database, label: 'Kesehatan Sistem', path: '/dashboard' },
+    { icon: Settings, label: 'Data Management',  path: '/data', adminOnly: true }
   ];
+
+  const menuItems = allMenuItems.filter(item => !item.adminOnly || user?.role === 'admin');
   
   const sidebarWidth = collapsed ? 'w-16' : 'w-64';
   const isChatRoute = location.pathname === '/chat';

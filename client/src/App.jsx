@@ -26,7 +26,7 @@ import RegisterPage from './pages/RegisterPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import { Sidebar, PageWrapper, MobileTopBar, RouteLoadingOverlay } from './components/layout';
-import { AuthProvider, RequireAuth } from './components/auth/AuthContext';
+import { AuthProvider, RequireAuth, RequireAdmin } from './components/auth/AuthContext';
 import { Analytics as VercelAnalytics } from '@vercel/analytics/react';
 import './utils/http';
 import './index.css';
@@ -189,7 +189,9 @@ function AnimatedRoutes() {
               element={
                 <PageWrapper>
                   <RequireAuth>
-                    <DataManagement />
+                    <RequireAdmin>
+                      <DataManagement />
+                    </RequireAdmin>
                   </RequireAuth>
                 </PageWrapper>
               }
