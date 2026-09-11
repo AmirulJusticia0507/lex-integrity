@@ -193,6 +193,10 @@ const RuleDefects = () => {
           <ListChecks className="h-5 w-5 text-indigo-600" />
           Pasal Relevan dalam Titik Cacat
         </h2>
+        <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+          Termasuk pasal yang berkaitan dengan isu sensitif seperti keabsahan dokumen, ijazah, keterangan palsu,
+          atau pemalsuan apabila istilah tersebut ditemukan di aturan.
+        </p>
         {articleFindings.length > 0 ? (
           <div className="space-y-3">
             {articleFindings.map((item) => (

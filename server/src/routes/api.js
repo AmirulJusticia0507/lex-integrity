@@ -53,6 +53,32 @@ const ARTICLE_STOPWORDS = new Set([
   'peraturan', 'pasal', 'ayat', 'huruf', 'nomor', 'tahun', 'tentang', 'serta', 'bagi', 'setiap'
 ]);
 
+const SENSITIVE_LEGAL_TOPICS = [
+  {
+    name: 'Keabsahan ijazah dan dokumen pendidikan',
+    patterns: [
+      /ijazah/i,
+      /dokumen\s+pendidikan/i,
+      /keabsahan\s+dokumen/i,
+      /riwayat\s+pendidikan/i,
+      /gelar\s+akademik/i,
+      /surat\s+palsu/i,
+      /keterangan\s+palsu/i,
+      /pemalsuan/i
+    ],
+    terms: [
+      'ijazah',
+      'dokumen pendidikan',
+      'keabsahan dokumen',
+      'riwayat pendidikan',
+      'gelar akademik',
+      'surat palsu',
+      'keterangan palsu',
+      'pemalsuan'
+    ]
+  }
+];
+
 function tokenizeLegalText(text = '') {
   return String(text)
     .toLowerCase()
@@ -61,10 +87,18 @@ function tokenizeLegalText(text = '') {
     .filter((word) => word.length > 3 && !ARTICLE_STOPWORDS.has(word));
 }
 
+function detectSensitiveTopicSignals(rule) {
+  const haystack = `${rule.title || ''}\n${rule.content || ''}\n${rule.category || ''}`.toLowerCase();
+  return SENSITIVE_LEGAL_TOPICS
+    .filter((topic) => topic.patterns.some((pattern) => pattern.test(haystack)))
+    .flatMap((topic) => topic.terms);
+}
+
 function articleFindingsForRule(rule) {
   const signals = [
     ...(Array.isArray(rule.loopholes) ? rule.loopholes : []),
-    ...(Array.isArray(rule.impacts) ? rule.impacts : [])
+    ...(Array.isArray(rule.impacts) ? rule.impacts : []),
+    ...detectSensitiveTopicSignals(rule)
   ];
   const signalTokens = new Set(tokenizeLegalText(signals.join(' ')));
   const chunks = chunkByPasal(rule.content || '', { maxChunkSize: 2200, includeContext: false });
