@@ -35,6 +35,7 @@ import { getBullRedisConfig } from '../config/redis.js';
 import { fetchOllama } from '../config/ollama.js';
 import { generateGeminiResponse, getGeminiModel, hasGemini } from '../config/gemini.js';
 import { buildHierarchy } from '../utils/hierarchy.js';
+import { chunkByPasal, extractPasalReferences } from '../utils/chunking.js';
 import { analyzeRegulatoryCompliance, getAgentStatus, analyzeMultiHopCompliance } from '../controllers/aiController.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -44,6 +45,50 @@ const KPU_PERATURAN_URL = 'https://jdih.kpu.go.id/peraturan-kpu';
 
 function toNumber(value) {
   return parseInt(String(value || '').replace(/[^\d]/g, ''), 10) || 0;
+}
+
+const ARTICLE_STOPWORDS = new Set([
+  'yang', 'dan', 'atau', 'dengan', 'untuk', 'dalam', 'pada', 'dari', 'oleh', 'atas', 'ini', 'itu',
+  'adalah', 'sebagai', 'kepada', 'dapat', 'harus', 'wajib', 'tidak', 'karena', 'terhadap', 'secara',
+  'peraturan', 'pasal', 'ayat', 'huruf', 'nomor', 'tahun', 'tentang', 'serta', 'bagi', 'setiap'
+]);
+
+function tokenizeLegalText(text = '') {
+  return String(text)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word.length > 3 && !ARTICLE_STOPWORDS.has(word));
+}
+
+function articleFindingsForRule(rule) {
+  const signals = [
+    ...(Array.isArray(rule.loopholes) ? rule.loopholes : []),
+    ...(Array.isArray(rule.impacts) ? rule.impacts : [])
+  ];
+  const signalTokens = new Set(tokenizeLegalText(signals.join(' ')));
+  const chunks = chunkByPasal(rule.content || '', { maxChunkSize: 2200, includeContext: false });
+
+  if (!chunks.length) return [];
+
+  return chunks
+    .map((chunk, index) => {
+      const tokens = tokenizeLegalText(chunk.text);
+      const matched = [...new Set(tokens.filter((token) => signalTokens.has(token)))].slice(0, 10);
+      const refs = extractPasalReferences(chunk.text);
+      const score = matched.length + refs.length * 0.25;
+      return {
+        id: `${rule.rule_code || rule.id}-${index}`,
+        article: chunk.metadata?.pasal || refs[0] || `Bagian ${index + 1}`,
+        heading: chunk.metadata?.headingPath || chunk.metadata?.pasal || refs[0] || `Bagian ${index + 1}`,
+        excerpt: chunk.text.slice(0, 900),
+        matched_terms: matched,
+        referenced_articles: refs,
+        relevance_score: Number(score.toFixed(2))
+      };
+    })
+    .sort((a, b) => b.relevance_score - a.relevance_score)
+    .slice(0, 8);
 }
 
 function parseKpuDate(code) {
@@ -678,6 +723,38 @@ router.get('/rules/:rule_code/conflicts', async (req, res) => {
       data: {
         source_rule: rule,
         similar_rules: similarRules
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// GET /api/rules/:rule_code/article-findings - Pasal yang paling relevan dengan temuan cacat/dampak
+router.get('/rules/:rule_code/article-findings', async (req, res) => {
+  try {
+    const { rule_code } = req.params;
+    const rule = await Rule.findOne({ where: { rule_code } });
+
+    if (!rule) {
+      return res.status(404).json({
+        success: false,
+        error: 'Peraturan tidak ditemukan'
+      });
+    }
+
+    const findings = articleFindingsForRule(rule);
+
+    res.json({
+      success: true,
+      data: {
+        rule_code: rule.rule_code,
+        title: rule.title,
+        total: findings.length,
+        findings
       }
     });
   } catch (error) {

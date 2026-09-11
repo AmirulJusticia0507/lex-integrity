@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle, FileText, GitBranch, Scale, Megaphone } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, FileText, GitBranch, Scale, Megaphone, ListChecks, Quote } from 'lucide-react';
 import { authFetch } from '../utils/http';
 import LoadingScreen from '../components/layout/LoadingScreen';
 
@@ -13,6 +13,7 @@ const RuleDefects = () => {
   const navigate = useNavigate();
   const [rule, setRule] = useState(null);
   const [conflicts, setConflicts] = useState(null);
+  const [articleFindings, setArticleFindings] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -22,12 +23,14 @@ const RuleDefects = () => {
     Promise.all([
       authFetch(`/api/rules/${encodeURIComponent(rule_code)}`).then(r => r.json()),
       authFetch(`/api/rules/${encodeURIComponent(rule_code)}/conflicts`).then(r => r.json()),
+      authFetch(`/api/rules/${encodeURIComponent(rule_code)}/article-findings`).then(r => r.json()).catch(() => null),
     ])
-      .then(([ruleJson, conflictsJson]) => {
+      .then(([ruleJson, conflictsJson, articleJson]) => {
         if (cancelled) return;
         if (!ruleJson.success) throw new Error(ruleJson.error || 'Peraturan tidak ditemukan');
         setRule(ruleJson.data);
         setConflicts(conflictsJson.success ? conflictsJson.data : null);
+        setArticleFindings(articleJson?.success ? list(articleJson.data?.findings) : []);
       })
       .catch((e) => !cancelled && setError(e.message))
       .finally(() => !cancelled && setLoading(false));
@@ -147,6 +150,49 @@ const RuleDefects = () => {
           </div>
         </section>
       </div>
+
+      <section className="bg-white rounded-xl shadow-md p-6 dark:bg-gray-800">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-4 dark:text-gray-100">
+          <ListChecks className="h-5 w-5 text-indigo-600" />
+          Pasal yang Perlu Dicek di Dokumen
+        </h2>
+        {articleFindings.length > 0 ? (
+          <div className="space-y-3">
+            {articleFindings.map((item) => (
+              <article key={item.id} className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{item.article}</h3>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{item.heading}</p>
+                  </div>
+                  <span className="w-fit rounded-full bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                    Relevansi {item.relevance_score}
+                  </span>
+                </div>
+                {item.matched_terms?.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {item.matched_terms.map((term) => (
+                      <span key={term} className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                        {term}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-3 flex items-start gap-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-900">
+                  <Quote className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+                    {item.excerpt}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Belum ada pasal spesifik yang bisa dipetakan. Biasanya ini terjadi jika isi dokumen belum lengkap atau formatnya belum memuat penanda "Pasal".
+          </p>
+        )}
+      </section>
 
       <section className="bg-white rounded-xl shadow-md p-6 dark:bg-gray-800">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-4 dark:text-gray-100">
