@@ -1,11 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle, FileText, GitBranch, Scale, Megaphone, ListChecks, Quote } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, FileText, GitBranch, Scale, Megaphone, ListChecks, Quote, BookOpen } from 'lucide-react';
 import { authFetch } from '../utils/http';
 import LoadingScreen from '../components/layout/LoadingScreen';
 
 function list(value) {
   return Array.isArray(value) ? value : [];
+}
+
+function summarizeRule(rule) {
+  const content = String(rule.content || '').replace(/\s+/g, ' ').trim();
+  if (content && !content.startsWith('{')) {
+    return content.length > 360 ? `${content.slice(0, 360)}...` : content;
+  }
+  return `${rule.title} merupakan produk hukum kategori ${rule.category || 'umum'} dalam rezim ${rule.regime || 'regulasi umum'}. Analisis ini membaca potensi cacat dari temuan loophole, dampak warga, dan keterkaitannya dengan aturan lain.`;
 }
 
 const RuleDefects = () => {
@@ -53,6 +61,7 @@ const RuleDefects = () => {
   const loopholes = list(rule.loopholes);
   const impacts = list(rule.impacts);
   const related = list(conflicts?.similar_rules);
+  const ruleSummary = summarizeRule(rule);
 
   return (
     <div className="space-y-6">
@@ -88,6 +97,34 @@ const RuleDefects = () => {
           </div>
         </div>
       </div>
+
+      <section className="bg-white rounded-xl shadow-md p-6 dark:bg-gray-800">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3 dark:text-gray-100">
+          <BookOpen className="h-5 w-5 text-blue-600" />
+          Penjelasan Analisis Kontradiksi
+        </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+              {ruleSummary}
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+              Titik cacat dibaca dari tiga lapisan: rumusan norma yang berpotensi multitafsir, dampak yang bisa
+              muncul pada warga, dan hubungan aturan ini dengan produk hukum lain yang serupa atau lebih tinggi.
+            </p>
+          </div>
+          <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 dark:border-blue-900/50 dark:bg-blue-900/20">
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+              Fokus pemeriksaan
+            </p>
+            <ul className="mt-2 space-y-2 text-sm text-blue-900 dark:text-blue-100">
+              <li>Pasal atau ayat yang paling dekat dengan temuan cacat.</li>
+              <li>Istilah penting yang berulang dalam loophole dan dampak.</li>
+              <li>Aturan pembanding yang bisa menjadi konteks kontradiksi.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <section className="bg-white rounded-xl shadow-md p-5 dark:bg-gray-800">
@@ -154,7 +191,7 @@ const RuleDefects = () => {
       <section className="bg-white rounded-xl shadow-md p-6 dark:bg-gray-800">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-4 dark:text-gray-100">
           <ListChecks className="h-5 w-5 text-indigo-600" />
-          Pasal yang Perlu Dicek di Dokumen
+          Pasal Relevan dalam Titik Cacat
         </h2>
         {articleFindings.length > 0 ? (
           <div className="space-y-3">
