@@ -12,6 +12,7 @@ import {
 import { applyGuardrails, moderateInput } from '../utils/guardrails.js';
 import { createOllamaClient, fetchOllama, getOllamaBaseUrl } from '../config/ollama.js';
 import { getGeminiModel, hasGemini } from '../config/gemini.js';
+import { getOpenAIClient, getAgentModel, getEmbeddingModel, generateOpenAIResponse, generateOpenAIEmbedding, hasOpenAI } from '../config/openai.js';
 
 // ── PostgreSQL pool (raw, untuk query pgvector) ─────────────────────────────
 const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_PRIVATE_URL || process.env.DATABASE_PUBLIC_URL;
@@ -31,6 +32,9 @@ const pool = databaseUrl
 
 // ── Ollama client ────────────────────────────────────────────────────────────
 const ollama = createOllamaClient();
+
+// ── OpenAI client ────────────────────────────────────────────────────────────
+const openai = hasOpenAI() ? getOpenAIClient() : null;
 
 // ── Cross-Encoder Reranker client ────────────────────────────────────────────
 const RERANKER_URL = process.env.RERANKER_URL || 'http://localhost:8001';
@@ -60,8 +64,8 @@ async function rerankDocuments(query, documents, topK = 5) {
   }
 }
 
-const AGENT_MODEL  = process.env.OLLAMA_AGENT_MODEL  || 'lex-integrity-agent:latest';
-const EMBED_MODEL  = process.env.OLLAMA_EMBED_MODEL  || 'nomic-embed-text';
+const AGENT_MODEL  = hasOpenAI() ? getAgentModel() : (process.env.OLLAMA_AGENT_MODEL  || 'lex-integrity-agent:latest');
+const EMBED_MODEL  = hasOpenAI() ? getEmbeddingModel() : (process.env.OLLAMA_EMBED_MODEL  || 'nomic-embed-text');
 
 // RRF config
 const RRF_K = parseInt(process.env.RRF_K || '60');
@@ -84,18 +88,31 @@ Pertanyaan: "${userQuery}"
 
 Dokumen Hipotetis:`;
 
-    const response = await ollama.generate({
-      model: HYDE_MODEL,
-      prompt: hydePrompt,
-      stream: false,
-      options: {
-        temperature: 0.3,
-        num_ctx: 2048,
-        top_p: 0.9,
-      },
-    });
+    let hypotheticalDoc = '';
     
-    const hypotheticalDoc = response.response || '';
+    if (hasOpenAI()) {
+      const response = await generateOpenAIResponse({
+        systemPrompt: 'Anda adalah asisten hukum Indonesia yang membantu membuat dokumen hipotetis untuk ekspansi query.',
+        messages: [{ role: 'user', content: hydePrompt }],
+        temperature: 0.3,
+        maxTokens: 1000,
+        responseFormat: { type: 'text' }
+      });
+      hypotheticalDoc = response.text;
+    } else {
+      const response = await ollama.generate({
+        model: HYDE_MODEL,
+        prompt: hydePrompt,
+        stream: false,
+        options: {
+          temperature: 0.3,
+          num_ctx: 2048,
+          top_p: 0.9,
+        },
+      });
+      hypotheticalDoc = response.response || '';
+    }
+    
     const expanded = `${userQuery}\n\n${hypotheticalDoc.slice(0, 1000)}`;
     
     console.log('[AI] HyDE expanded query:', expanded.slice(0, 200) + '...');
@@ -392,11 +409,16 @@ export const analyzeRegulatoryCompliance = async (req, res) => {
     // ── 1. Hybrid Search (Vector + BM25 + RRF) ──────────────────────────────
     if (useVector && useHybrid && await hasPgvector()) {
       try {
-        const embedRes = await ollama.embeddings({
-          model: EMBED_MODEL,
-          prompt: searchQuery,
-        });
-        const queryVector = embedRes.embedding;
+        let queryVector;
+        if (hasOpenAI()) {
+          queryVector = await generateOpenAIEmbedding(searchQuery);
+        } else {
+          const embedRes = await ollama.embeddings({
+            model: EMBED_MODEL,
+            prompt: searchQuery,
+          });
+          queryVector = embedRes.embedding;
+        }
         chunks = await hybridSearch(queryVector, searchQuery, limit);
         if (chunks.length > 0) retrievalMethod = 'hybrid_rrf';
       } catch (embedErr) {
@@ -407,11 +429,16 @@ export const analyzeRegulatoryCompliance = async (req, res) => {
     // ── 2. Vector Only (jika hybrid gagal atau tidak diminta) ─────────────────
     if (chunks.length === 0 && useVector && await hasPgvector()) {
       try {
-        const embedRes = await ollama.embeddings({
-          model: EMBED_MODEL,
-          prompt: searchQuery,
-        });
-        const queryVector = embedRes.embedding;
+        let queryVector;
+        if (hasOpenAI()) {
+          queryVector = await generateOpenAIEmbedding(searchQuery);
+        } else {
+          const embedRes = await ollama.embeddings({
+            model: EMBED_MODEL,
+            prompt: searchQuery,
+          });
+          queryVector = embedRes.embedding;
+        }
         chunks = await vectorSearch(queryVector, limit);
         if (chunks.length > 0) retrievalMethod = 'pgvector';
       } catch (embedErr) {
@@ -460,22 +487,35 @@ Kembalikan respons HANYA dalam format JSON valid berikut (TANPA teks di luar JSO
   "recommended_sanction": "Rekomendasi sanksi administrasi / pidana yang adil"
 }`;
 
-    // ── 5. Panggil lex-integrity-agent via Ollama ────────────────────────────
-    const ollamaRes = await ollama.generate({
-      model: AGENT_MODEL,
-      prompt: promptPayload,
-      stream: false,
-      format: 'json',
-      think: process.env.OLLAMA_THINK === 'true',
-      keep_alive: `${parseInt(process.env.OLLAMA_KEEP_ALIVE_MIN || 30)}m`,
-      options: {
+    // ── 5. Panggil lex-integrity-agent via OpenAI/Ollama ────────────────────────────
+    let rawResponse;
+    
+    if (hasOpenAI()) {
+      const response = await generateOpenAIResponse({
+        systemPrompt: 'Anda adalah agent analisis kepatuhan regulasi hukum Indonesia. Analisis isu secara jujur, adil, berempati, dan berpijak pada kemanusiaan serta keadilan sosial. Kembalikan respons HANYA dalam format JSON valid.',
+        messages: [{ role: 'user', content: promptPayload }],
         temperature: 0.15,
-        num_ctx: 4096,
-        top_p: 0.9,
-      },
-    });
+        maxTokens: 4096,
+        responseFormat: { type: 'json_object' }
+      });
+      rawResponse = response.text;
+    } else {
+      const ollamaRes = await ollama.generate({
+        model: AGENT_MODEL,
+        prompt: promptPayload,
+        stream: false,
+        format: 'json',
+        think: process.env.OLLAMA_THINK === 'true',
+        keep_alive: `${parseInt(process.env.OLLAMA_KEEP_ALIVE_MIN || 30)}m`,
+        options: {
+          temperature: 0.15,
+          num_ctx: 4096,
+          top_p: 0.9,
+        },
+      });
+      rawResponse = ollamaRes.response || '';
+    }
 
-    const rawResponse = ollamaRes.response || '';
     const resultJson  = extractJson(rawResponse);
 
     // ── Output Guardrails ──────────────────────────────────────────────────────
@@ -622,6 +662,29 @@ export const analyzeMultiHopCompliance = async (req, res) => {
 // ── CONTROLLER: GET /api/analyze/status ─────────────────────────────────────
 export const getAgentStatus = async (req, res) => {
   const pgvector = await hasPgvector();
+  
+  if (hasOpenAI()) {
+    return res.status(200).json({
+      success: true,
+      data: {
+        agent_model:       getAgentModel(),
+        agent_available:   true,
+        ai_provider:       'openai',
+        openai_available:  true,
+        openai_base_url:   process.env.OPENAI_BASE_URL || 'https://api.bazaarlink.ai/v1',
+        gemini_available:  hasGemini(),
+        diagnostic_version: 'openai-compatible-v1',
+        embed_model:       getEmbeddingModel(),
+        pgvector_ready:    pgvector,
+        retrieval_methods: ['hybrid_rrf', 'pgvector', 'bm25'],
+        rrf_k:             RRF_K,
+        reranker:          { available: false },
+        hyde_enabled:      HYDE_ENABLED,
+        hyde_model:        HYDE_MODEL,
+      },
+    });
+  }
+
   if (hasGemini()) {
     return res.status(200).json({
       success: true,

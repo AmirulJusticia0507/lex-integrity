@@ -40,6 +40,7 @@
     "node-fetch": "^3.3.2",
     "nodemailer": "^10.0.2",
     "ollama": "^0.6.3",
+    "openai": "^7.15.0",
     "otplib": "^13.5.0",
     "pg": "^8.23.0",
     "pg-hstore": "^2.3.4",
