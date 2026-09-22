@@ -13,6 +13,7 @@ import { applyGuardrails, moderateInput } from '../utils/guardrails.js';
 import { createOllamaClient, fetchOllama, getOllamaBaseUrl } from '../config/ollama.js';
 import { getGeminiModel, hasGemini } from '../config/gemini.js';
 import { getOpenAIClient, getAgentModel, getEmbeddingModel, generateOpenAIResponse, generateOpenAIEmbedding, hasOpenAI } from '../config/openai.js';
+import { isPharmaceuticalQuery, selectAgentSystemPrompt } from '../config/prompts.js';
 
 // ── PostgreSQL pool (raw, untuk query pgvector) ─────────────────────────────
 const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_PRIVATE_URL || process.env.DATABASE_PUBLIC_URL;
@@ -467,7 +468,11 @@ export const analyzeRegulatoryCompliance = async (req, res) => {
     const contextText = buildContext(chunks);
 
     // ── 4. Bangun prompt untuk lex-integrity-agent ───────────────────────────
-    const promptPayload = `Diberikan kumpulan pasal & regulasi hukum berikut dari database:
+    const systemPrompt = selectAgentSystemPrompt(cleanQuery);
+    const pharmaceuticalAnalysis = isPharmaceuticalQuery(cleanQuery);
+    const promptPayload = `${systemPrompt}
+
+Diberikan kumpulan pasal & regulasi hukum berikut dari database:
 
 ${contextText}
 
@@ -492,7 +497,7 @@ Kembalikan respons HANYA dalam format JSON valid berikut (TANPA teks di luar JSO
     
     if (hasOpenAI()) {
       const response = await generateOpenAIResponse({
-        systemPrompt: 'Anda adalah agent analisis kepatuhan regulasi hukum Indonesia. Analisis isu secara jujur, adil, berempati, dan berpijak pada kemanusiaan serta keadilan sosial. Kembalikan respons HANYA dalam format JSON valid.',
+        systemPrompt: `${systemPrompt}\nKembalikan respons HANYA dalam format JSON valid.`,
         messages: [{ role: 'user', content: promptPayload }],
         temperature: 0.15,
         maxTokens: 4096,
@@ -562,6 +567,7 @@ Kembalikan respons HANYA dalam format JSON valid berikut (TANPA teks di luar JSO
         reranker_used:    reranked,
         hyde_enabled:     HYDE_ENABLED,
         hyde_used:        usedHyde,
+        agent_profile:    pharmaceuticalAnalysis ? 'lexpharms' : 'lex-integrity',
       },
     });
 

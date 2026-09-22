@@ -34,6 +34,7 @@ import { politeFetch } from '../utils/crawlerPolicy.js';
 import { getBullRedisConfig } from '../config/redis.js';
 import { fetchOllama } from '../config/ollama.js';
 import { generateGeminiResponse, getGeminiModel, hasGemini } from '../config/gemini.js';
+import { selectAgentSystemPrompt } from '../config/prompts.js';
 import { buildHierarchy } from '../utils/hierarchy.js';
 import { chunkByPasal, extractPasalReferences } from '../utils/chunking.js';
 import { analyzeRegulatoryCompliance, getAgentStatus, analyzeMultiHopCompliance } from '../controllers/aiController.js';
@@ -613,9 +614,10 @@ router.post('/chat', authenticateToken, async (req, res) => {
     }
 
     // Build system message & prompt
+    const baseSystemPrompt = selectAgentSystemPrompt(`${message} ${rule_title || ''}`);
     const systemPrompt = extraContext
-      ? `Anda adalah Lex Integrity Agent, asisten AI hukum lokal yang jujur, adil, berempati, dan berpijak pada kemanusiaan serta keadilan sosial di Indonesia. Jika ada KONTEKS REGULASI UTAMA, jadikan peraturan itu fokus utama jawaban. Analisis harus merujuk pada kode, judul, dan isi regulasi tersebut. Jangan mengalihkan fokus ke peraturan lain kecuali hanya sebagai pembanding singkat atau jika user memintanya.`
-      : `Anda adalah Lex Integrity Agent, asisten AI hukum lokal yang jujur, adil, berempati, dan berpijak pada kemanusiaan serta keadilan sosial di Indonesia. Berikan jawaban yang tepat, berintegritas, dan mudah dipahami.`;
+      ? `${baseSystemPrompt}\nJika ada KONTEKS REGULASI UTAMA, jadikan peraturan itu fokus utama jawaban. Analisis harus merujuk pada kode, judul, dan isi regulasi tersebut. Jangan mengalihkan fokus ke peraturan lain kecuali sebagai pembanding singkat atau jika user memintanya.`
+      : baseSystemPrompt;
 
     const chatMessages = [
       { role: 'system', content: systemPrompt }
