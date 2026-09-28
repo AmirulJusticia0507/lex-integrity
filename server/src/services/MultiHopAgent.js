@@ -95,8 +95,14 @@ async function bm25Search(query, limit = 5) {
 }
 
 async function hybridSearch(query, limit = 5) {
-  const vec = await embedQuery(query);
-  const [v, b] = await Promise.all([vectorSearch(vec, limit * 2), bm25Search(query, limit * 2)]);
+  const b = await bm25Search(query, limit * 2);
+  let v = [];
+  try {
+    const vec = await embedQuery(query);
+    v = await vectorSearch(vec, limit * 2);
+  } catch (error) {
+    console.warn('[MultiHop] Embedding unavailable, using full-text retrieval:', error.message);
+  }
   const fused = reciprocalRankFusion(v, b);
   return fused.slice(0, limit);
 }
