@@ -203,9 +203,10 @@ Kembalikan HANYA JSON:
  * RETRIEVAL: Search evidence for a sub-question
  */
 async function retrieveEvidence(subQuestion, previousContext = []) {
+  const question = typeof subQuestion === 'string' ? subQuestion : subQuestion.question;
   const searchQuery = previousContext.length > 0 
-    ? `${subQuestion}\nKonteks: ${previousContext.slice(-2).map(c => c.conclusion).join(' ')}`
-    : subQuestion;
+    ? `${question}\nKonteks: ${previousContext.slice(-2).map(c => c.conclusion).join(' ')}`
+    : question;
   
   const chunks = await hybridSearch(searchQuery, 5);
   return chunks;
