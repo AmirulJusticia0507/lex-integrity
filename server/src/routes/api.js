@@ -258,7 +258,7 @@ router.get('/rules', async (req, res) => {
     // Execute query
     const { count, rows: rules } = await Rule.findAndCountAll({
       where,
-      order: [['created_at', 'DESC']],
+      order: [['created_at', 'DESC'], ['id', 'DESC']],
       offset,
       limit: limitNum
     });
