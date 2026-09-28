@@ -13,6 +13,7 @@ import {
   createFallbackResponse
 } from '../utils/schemaValidator.js';
 import { createOllamaClient } from '../config/ollama.js';
+import { generateGeminiResponse, hasGemini } from '../config/gemini.js';
 
 const ollama = createOllamaClient();
 
@@ -128,6 +129,14 @@ function buildContext(chunks) {
 }
 
 async function llmGenerate(prompt, format = 'json', options = {}) {
+  if (hasGemini()) {
+    const response = await generateGeminiResponse({
+      systemPrompt: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: options.temperature ?? 0.15,
+    });
+    return response.text || '';
+  }
   const res = await ollama.generate({
     model: AGENT_MODEL,
     prompt,
