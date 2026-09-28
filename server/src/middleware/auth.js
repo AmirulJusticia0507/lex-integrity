@@ -1,5 +1,6 @@
 // Authentication middleware
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 export const generateToken = (payload) => {
   return jwt.sign(payload, process.env.JWT_SECRET || 'your_jwt_secret_here_change_this_in_production', {
@@ -24,6 +25,20 @@ export const authenticateToken = (req, res, next) => {
   }
 };
 
+export const authenticateTokenOrService = (req, res, next) => {
+  const supplied = String(req.headers['x-internal-api-key'] || '');
+  const expected = String(process.env.INTERNAL_API_KEY || '');
+  if (supplied && expected) {
+    const suppliedBuffer = Buffer.from(supplied);
+    const expectedBuffer = Buffer.from(expected);
+    if (suppliedBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(suppliedBuffer, expectedBuffer)) {
+      req.user = { role: 'service', service: 'lex-dss' };
+      return next();
+    }
+  }
+  return authenticateToken(req, res, next);
+};
+
 export const requireRole = (...roles) => (req, res, next) => {
   if (!req.user || (req.user.role !== 'superadmin' && !roles.includes(req.user.role))) {
     return res.status(403).json({ error: 'Akses ditolak: hak akses tidak mencukupi' });
@@ -31,4 +46,4 @@ export const requireRole = (...roles) => (req, res, next) => {
   next();
 };
 
-export default { generateToken, authenticateToken, requireRole };
+export default { generateToken, authenticateToken, authenticateTokenOrService, requireRole };

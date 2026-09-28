@@ -319,8 +319,23 @@ export default function ComplianceAnalysis() {
       const json = await res.json();
       if (!json.success) throw new Error(json.message || json.error || 'Gagal menganalisis.');
 
-      setResult(json);
-      setHistory(prev => [{ query: q, result: json, ts: new Date() }, ...prev].slice(0, 10));
+      let lexDss = null;
+      try {
+        const dssResponse = await authFetch(`${API_BASE}/api/integration/dss/conflict`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ input_text: q, domain: 'HTN', save_result: false }),
+          signal: controller.signal,
+        });
+        const dssJson = await dssResponse.json();
+        if (dssJson.success) lexDss = dssJson.data;
+      } catch (_) {
+        // Lex-DSS enriches the result but must not block the primary analysis.
+      }
+
+      const combinedResult = { ...json, lex_dss: lexDss };
+      setResult(combinedResult);
+      setHistory(prev => [{ query: q, result: combinedResult, ts: new Date() }, ...prev].slice(0, 10));
     } catch (e) {
       if (e.name === 'AbortError') {
         setError('Analisis melebihi batas waktu 5 menit. Coba query yang lebih singkat.');
@@ -459,6 +474,11 @@ export default function ComplianceAnalysis() {
               <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700">
                 <Info className="h-3 w-3 text-slate-400" /> {new Date().toLocaleString('id-ID')}
               </span>
+              {result.lex_dss && (
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 border border-emerald-700 text-emerald-300">
+                  <Scale className="h-3 w-3" /> Lex-DSS: {result.lex_dss.conflict_count} konflik
+                </span>
+              )}
               <button onClick={handleAnalyze} className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 hover:border-sky-500 hover:text-sky-300 transition-colors">
                 <RefreshCw className="h-3 w-3" /> Re-analisis
               </button>

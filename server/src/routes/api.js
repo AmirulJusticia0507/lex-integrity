@@ -25,7 +25,7 @@ const authenticator = {
 import twilio from 'twilio';
 import { sequelize, Rule, User, Role, Analytics } from '../models/index.js';
 import scrapeLock from '../utils/scrapeLock.js';
-import { generateToken, authenticateToken, requireRole } from '../middleware/auth.js';
+import { generateToken, authenticateToken, authenticateTokenOrService, requireRole } from '../middleware/auth.js';
 import CacheService from '../services/CacheService.js';
 import BackupService from '../services/BackupService.js';
 import ScheduleService from '../services/ScheduleService.js';
@@ -2146,7 +2146,30 @@ router.get('/rules/:rule_code/source-docs', authenticateToken, async (req, res) 
 router.post('/analyze', authenticateToken, analyzeRegulatoryCompliance);
 
 // POST /api/analyze/multi-hop - Analisis multi-hop (ReAct) untuk query kompleks
-router.post('/analyze/multi-hop', authenticateToken, analyzeMultiHopCompliance);
+router.post('/analyze/multi-hop', authenticateTokenOrService, analyzeMultiHopCompliance);
+
+router.post('/integration/dss/conflict', authenticateToken, async (req, res) => {
+  const baseUrl = String(process.env.LEX_DSS_URL || '').replace(/\/$/, '');
+  if (!baseUrl || !process.env.INTERNAL_API_KEY) {
+    return res.status(503).json({ success: false, error: 'Integrasi Lex-DSS belum dikonfigurasi' });
+  }
+
+  try {
+    const response = await fetch(`${baseUrl}/api/v1/integration/conflict`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Api-Key': process.env.INTERNAL_API_KEY,
+      },
+      body: JSON.stringify(req.body),
+      signal: AbortSignal.timeout(180000),
+    });
+    const data = await response.json();
+    return res.status(response.status).json({ success: response.ok, data: response.ok ? data : undefined, error: response.ok ? undefined : data });
+  } catch (error) {
+    return res.status(502).json({ success: false, error: `Lex-DSS tidak tersedia: ${error.message}` });
+  }
+});
 
 // GET /api/analyze/status - Cek ketersediaan agent & pgvector
 router.get('/analyze/status', getAgentStatus);
