@@ -347,6 +347,44 @@ docker compose -f docker-compose.home-server.yml up -d --build
 curl http://127.0.0.1:3000/health
 ```
 
+## 12. Rekomendasi pembagian hosting
+
+Gunakan pembagian berikut agar biaya tetap rendah tanpa mengorbankan kemampuan AI lokal:
+
+| Aplikasi/komponen | Penempatan | Alasan |
+| --- | --- | --- |
+| Lex Integrity backend, PostgreSQL, Redis, queue, scraper, dan Ollama | Laptop server kedua | Membutuhkan RAM besar, penyimpanan lokal, dan akses model Ollama 8B. Lebih hemat daripada VPS 16 GB. |
+| Lex Integrity frontend | Vercel | Frontend statis tidak perlu ditempatkan bersama backend. |
+| Al-Hikmah backend | Railway Hobby | Backend relatif ringan karena AI memakai Gemini/API eksternal dan database memakai Neon. |
+| Al-Hikmah frontend | Vercel | Tetap sederhana dan dapat dideploy otomatis dari Git. |
+| Al-Hikmah database | Neon | Tidak membebani RAM dan penyimpanan Railway. |
+| Akses publik Lex Integrity | Cloudflare Tunnel | Tidak membutuhkan IP publik statis atau port forwarding. |
+
+### Batas biaya Railway untuk Al-Hikmah
+
+Railway Hobby memiliki biaya minimum USD 5 per bulan dan mencakup USD 5 pemakaian resource. Tagihan mengikuti pemakaian apabila total resource melebihi nilai tersebut.
+
+- Pasang notifikasi biaya pada USD 5 dan USD 8.
+- Pasang hard limit sekitar USD 10 per bulan bila opsinya tersedia pada akun.
+- Setelah berjalan satu minggu, periksa **Usage > Estimated Usage**.
+- Jangan menjalankan Ollama di Railway Hobby; gunakan Gemini/API eksternal untuk Al-Hikmah.
+
+Perkiraan awal Al-Hikmah adalah USD 5-10 per bulan, tergantung CPU, RAM, trafik, dan network egress. Biaya Gemini dihitung terpisah sesuai pemakaian API.
+
+### Kapan perlu pindah ke VPS
+
+Pertahankan Lex Integrity di laptop server selama listrik, internet, pendinginan, dan backup dapat dijaga. Pertimbangkan VPS 16 GB ketika aplikasi harus tersedia 24 jam, pengguna sudah rutin, atau ketergantungan pada koneksi rumah mulai mengganggu layanan.
+
+Sebagai pembanding, Biznet Gio NEO Lite LL 16.8 tercantum dengan 16 GB RAM, 8 vCPU, dan SSD 60 GB. Harga promo yang pernah diperiksa adalah Rp459.000 per bulan atau Rp5.508.000 per tahun sebelum pajak. Pastikan harga promo, perpanjangan, dan spesifikasi terbaru langsung di halaman penyedia sebelum membeli.
+
+Dengan kondisi saat ini, keputusan yang direkomendasikan adalah:
+
+1. Jalankan Lex Integrity dan Ollama di laptop kedua.
+2. Gunakan Cloudflare Tunnel untuk endpoint HTTPS publik.
+3. Jalankan Al-Hikmah backend di Railway Hobby dengan batas biaya.
+4. Pertahankan frontend di Vercel dan database Al-Hikmah di Neon.
+5. Simpan backup database Lex Integrity di perangkat atau lokasi lain.
+
 ## Checklist akhir
 
 - Jumlah produk hukum sama dengan database sumber.
