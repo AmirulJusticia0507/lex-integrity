@@ -4,6 +4,12 @@ Fokus: Ringkasan proyek, fitur utama, quick start, dan Panduan Scraping PDF Huku
 
 Platform analisis integritas hukum dan pelacak kontradiksi regulasi otomatis berbasis **MERN Stack** dan **Local LLM (100% Offline & Free)**. Sistem ini dirancang untuk memetakan hirarki aturan hukum Indonesia (UU, PP, Perpres, Perda) dari era awal hingga era Presiden Prabowo Subianto, mendeteksi celah diskresi (*abuse of power*), menganalisis dampak kebijakan, serta memberikan rekomendasi sanksi secara visual.
 
+## Deploy Production
+
+- [Panduan deploy ke DomaiNesia Cloud VPS Lite](DEPLOY_DOMAINESIA.md)
+- Rekomendasi all-in-one dengan Ollama 8B: **Cloud VPS Lite 16GB**
+- [Buka halaman pembelian Cloud VPS Lite](https://www.domainesia.com/cloud-vps-lite/)
+
 ---
 
 ## 🌟 Fitur Utama
