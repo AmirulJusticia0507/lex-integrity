@@ -208,14 +208,18 @@ docker compose -f docker-compose.home-server.yml logs --tail=100 worker
 
 Jika backend tidak dapat menjangkau Ollama, periksa `sudo systemctl status ollama`, `curl http://127.0.0.1:11434/api/tags`, dan nilai `OLLAMA_HOST`.
 
-## 7. Pindahkan sekitar 45 ribu produk hukum
+## 7. Pindahkan database lokal ke laptop server
 
-Data tidak otomatis berpindah bersama source code. Buat dump dari database laptop lama.
+Data tidak otomatis berpindah bersama source code atau `git pull`. Gunakan `pg_dump` agar seluruh tabel, pengguna aplikasi, role, dan produk hukum pada database lokal ikut tersalin. Proses ini membuat salinan dan tidak menghapus database sumber.
 
-Di Windows/laptop lama:
+### 7.1 Buat dump di laptop utama
+
+Jalankan dari PowerShell pada laptop yang memiliki database lengkap. Contoh berikut menggunakan PostgreSQL lokal pada port `5432`, user `postgres`, password `postgres`, dan database `lex_integrity`:
 
 ```powershell
-$env:PGPASSWORD="PASSWORD_DATABASE_LOKAL"
+cd C:\laragon\www\lex-integrity
+$env:PGPASSWORD="postgres"
+
 pg_dump `
   -h 127.0.0.1 `
   -p 5432 `
@@ -223,20 +227,39 @@ pg_dump `
   -d lex_integrity `
   -Fc `
   -f lex_integrity.dump
-
-scp .\lex_integrity.dump USER_SERVER@IP_LAPTOP_SERVER:/home/USER_SERVER/
 ```
 
-Catat jumlah sebelum migrasi:
+Pastikan dump berhasil dibuat dan catat jumlah data sumber:
 
 ```powershell
+Get-Item .\lex_integrity.dump
+
 psql -h 127.0.0.1 -p 5432 -U postgres -d lex_integrity `
   -c "SELECT COUNT(*) FROM rules;"
 ```
 
-Di laptop server:
+Jika PostgreSQL lokal memakai port lain, ganti nilai `-p`. Sebagai contoh, gunakan `-p 5433` apabila container lama dipublikasikan pada port tersebut.
+
+### 7.2 Kirim dump ke laptop kedua
+
+```powershell
+scp .\lex_integrity.dump USER_SERVER@IP_LAPTOP_SERVER:~/
+```
+
+Contoh:
+
+```powershell
+scp .\lex_integrity.dump amirul@192.168.1.20:~/
+```
+
+### 7.3 Restore ke PostgreSQL Docker di laptop kedua
+
+Jalankan di laptop server:
 
 ```bash
+cd ~/lex-integrity
+docker compose -f docker-compose.home-server.yml up -d postgres
+
 docker cp ~/lex_integrity.dump lex-integrity-postgres:/tmp/lex_integrity.dump
 docker exec lex-integrity-postgres pg_restore \
   -U postgres \
@@ -245,7 +268,9 @@ docker exec lex-integrity-postgres pg_restore \
   /tmp/lex_integrity.dump
 ```
 
-Verifikasi data:
+Peringatan objek tidak ditemukan saat memakai `--clean --if-exists` dapat muncul pada database tujuan yang masih baru. Restore dianggap gagal jika `pg_restore` berhenti dengan error atau mengembalikan exit code selain nol.
+
+### 7.4 Verifikasi dan hidupkan aplikasi
 
 ```bash
 docker exec lex-integrity-postgres psql \
@@ -255,9 +280,13 @@ docker exec lex-integrity-postgres psql \
 docker exec lex-integrity-postgres psql \
   -U postgres -d lex_integrity \
   -c "SELECT 'rules' AS tabel, COUNT(*) FROM rules UNION ALL SELECT 'users', COUNT(*) FROM users UNION ALL SELECT 'roles', COUNT(*) FROM roles;"
+
+docker compose -f docker-compose.home-server.yml up -d --build
+docker compose -f docker-compose.home-server.yml ps
+curl http://127.0.0.1:3000/health
 ```
 
-Jumlah `rules` sebelum dan sesudah restore harus sama. Jangan hapus database lama sebelum backup dan server baru terverifikasi.
+Jumlah `rules` sebelum dan sesudah restore harus sama. Jangan memasukkan `lex_integrity.dump` ke Git dan jangan menghapus database lama sebelum backup serta server baru terverifikasi.
 
 ## 8. Publikasikan dengan Cloudflare Tunnel
 
