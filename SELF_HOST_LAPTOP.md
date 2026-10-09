@@ -414,6 +414,54 @@ Dengan kondisi saat ini, keputusan yang direkomendasikan adalah:
 4. Pertahankan frontend di Vercel dan database Al-Hikmah di Neon.
 5. Simpan backup database Lex Integrity di perangkat atau lokasi lain.
 
+## 13. Meminta coding agent menyiapkan server
+
+Coding agent harus dijalankan dari direktori repository agar dapat membaca source code, konfigurasi, dan panduan ini. Tarik perubahan terbaru terlebih dahulu.
+
+Windows PowerShell:
+
+```powershell
+cd C:\laragon\www\lex-integrity
+git pull origin main
+codex
+```
+
+Linux:
+
+```bash
+cd ~/lex-integrity
+git pull origin main
+codex
+```
+
+Setelah agent terbuka, kirim prompt berikut:
+
+```text
+Baca SELF_HOST_LAPTOP.md dan periksa kondisi project ini. Siapkan Lex Integrity
+sebagai home server di laptop ini mengikuti dokumentasi tersebut.
+
+Kerjakan bertahap:
+1. Periksa Docker, Docker Compose, PostgreSQL, Redis, Node.js, Ollama, dan
+   Cloudflare Tunnel.
+2. Periksa file .env tanpa menampilkan nilai rahasia.
+3. Jalankan docker-compose.home-server.yml.
+4. Restore lex_integrity.dump ke PostgreSQL lokal jika file tersedia.
+5. Pastikan model lex-integrity-agent:latest dan nomic-embed-text tersedia.
+6. Jalankan backend, worker, database, dan Redis.
+7. Verifikasi jumlah data pada tabel rules.
+8. Uji /health dan /api/analyze/status.
+9. Jangan menghapus database, dump, atau volume yang sudah ada.
+10. Laporkan langkah yang membutuhkan tindakan manual dariku.
+```
+
+Agent juga dapat diberi instruksi langsung dari terminal tanpa sesi interaktif:
+
+```bash
+codex "Baca SELF_HOST_LAPTOP.md lalu siapkan project ini sebagai home server. Periksa dependency, jalankan Docker Compose, restore lex_integrity.dump jika tersedia, verifikasi database, Ollama, Redis, worker, dan health endpoint. Jangan hapus data atau volume yang sudah ada dan jangan tampilkan nilai rahasia dari .env."
+```
+
+Tetap tinjau perintah yang diajukan agent sebelum menjalankan operasi database. File `lex_integrity.dump` dan `.env` tidak boleh dimasukkan ke commit Git.
+
 ## Checklist akhir
 
 - Jumlah produk hukum sama dengan database sumber.
