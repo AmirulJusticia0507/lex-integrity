@@ -7,6 +7,7 @@ Platform analisis integritas hukum dan pelacak kontradiksi regulasi otomatis ber
 ## Deploy Production
 
 - [Panduan deploy ke DomaiNesia Cloud VPS Lite](DEPLOY_DOMAINESIA.md)
+- [Panduan menjadikan laptop sendiri sebagai server](SELF_HOST_LAPTOP.md)
 - Rekomendasi all-in-one dengan Ollama 8B: **Cloud VPS Lite 16GB**
 - [Buka halaman pembelian Cloud VPS Lite](https://www.domainesia.com/cloud-vps-lite/)
 
